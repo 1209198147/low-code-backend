@@ -1,9 +1,12 @@
 package com.shikou.aicode.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.io.FileUtil;
+import cn.hutool.core.util.RandomUtil;
 import cn.hutool.core.util.StrUtil;
 import com.mybatisflex.core.query.QueryWrapper;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
+import com.shikou.aicode.constant.AppConstant;
 import com.shikou.aicode.core.AiGeneratorFacade;
 import com.shikou.aicode.exception.BusinessException;
 import com.shikou.aicode.exception.ErrorCode;
@@ -18,9 +21,12 @@ import com.shikou.aicode.model.vo.UserVO;
 import com.shikou.aicode.service.AppService;
 import com.shikou.aicode.service.UserService;
 import jakarta.annotation.Resource;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 
+import java.io.File;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -109,5 +115,43 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App>  implements AppS
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "应用代码生成类型错误");
         }
         return aiGeneratorFacade.generateCodeAndSave(message, codeGenTypeEnum, appId);
+    }
+
+    @Override
+    public String deployApp(Long appId, User loginUser) {
+        // 1. 参数校验
+        ThrowUtils.throwIf(appId == null || appId <= 0, ErrorCode.PARAMS_ERROR, "应用 ID 错误");
+        ThrowUtils.throwIf(loginUser == null, ErrorCode.NOT_LOGIN_ERROR, "用户未登录");
+        // 2. 查询应用信息
+        App app = this.getById(appId);
+        ThrowUtils.throwIf(app == null, ErrorCode.NOT_FOUND_ERROR, "应用不存在");
+        // 3. 权限校验，仅本人可以部署自己的应用
+        if (!app.getUserId().equals(loginUser.getId())) {
+            throw new BusinessException(ErrorCode.NO_AUTH_ERROR, "无权限部署该应用");
+        }
+        // 4. 判断是否有部署密钥
+        String deployKey = app.getDeployKey();
+        if( StringUtils.isBlank(deployKey) ){
+            deployKey = RandomUtil.randomString(6);
+        }
+        // 5.部署
+        try {
+            String sourcePath = AppConstant.CODE_OUTPUT_ROOT_DIR + File.separator + StrUtil.format("{}_{}", app.getCodeGenType(), appId);
+            File sourceDir = new File(sourcePath);
+            ThrowUtils.throwIf(!FileUtil.exist(sourceDir), ErrorCode.NOT_FOUND_ERROR, "应用未生成,请先生成应用");
+            String deployPath = AppConstant.CODE_DEPLOY_ROOT_DIR + File.separator + deployKey;
+            File deployDir = new File(deployPath);
+            FileUtil.copyContent(sourceDir, deployDir, true);
+        } catch (Exception e) {
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR, "应用部署失败：" + e.getMessage());
+        }
+        // 6.更新数据库
+        App updateApp = new App();
+        updateApp.setId(appId);
+        updateApp.setDeployKey(deployKey);
+        updateApp.setDeployedTime(LocalDateTime.now());
+        boolean result = updateById(updateApp);
+        ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR, "更新应用部署信息失败");
+        return String.format("%s/%s", AppConstant.CODE_DEPLOY_HOST, deployKey);
     }
 }

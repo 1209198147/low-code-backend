@@ -14,10 +14,7 @@ import com.shikou.aicode.constant.UserConstant;
 import com.shikou.aicode.exception.BusinessException;
 import com.shikou.aicode.exception.ErrorCode;
 import com.shikou.aicode.exception.ThrowUtils;
-import com.shikou.aicode.model.dto.app.AppAddRequest;
-import com.shikou.aicode.model.dto.app.AppAdminUpdateRequest;
-import com.shikou.aicode.model.dto.app.AppQueryRequest;
-import com.shikou.aicode.model.dto.app.AppUpdateRequest;
+import com.shikou.aicode.model.dto.app.*;
 import com.shikou.aicode.model.entity.User;
 import com.shikou.aicode.model.enums.CodeGenTypeEnum;
 import com.shikou.aicode.model.vo.AppVO;
@@ -79,6 +76,22 @@ public class AppController {
                 ));
     }
 
+    @PostMapping("/deploy")
+    public BaseResponse<String> deployApp(@RequestBody AppDeployRequest appDeployRequest, HttpServletRequest request) {
+        // 检查部署请求是否为空
+        ThrowUtils.throwIf(appDeployRequest == null, ErrorCode.PARAMS_ERROR);
+        // 获取应用 ID
+        Long appId = appDeployRequest.getAppId();
+        // 检查应用 ID 是否为空
+        ThrowUtils.throwIf(appId == null || appId <= 0, ErrorCode.PARAMS_ERROR, "应用 ID 不能为空");
+        // 获取当前登录用户
+        User loginUser = userService.getLoginUser(request);
+        // 调用服务部署应用
+        String deployUrl = appService.deployApp(appId, loginUser);
+        // 返回部署 URL
+        return ResultUtils.success(deployUrl);
+    }
+
     @PostMapping("/add")
     public BaseResponse<Long> addApp(@RequestBody AppAddRequest appAddRequest, HttpServletRequest request) {
         ThrowUtils.throwIf(appAddRequest == null, ErrorCode.PARAMS_ERROR);
@@ -91,7 +104,7 @@ public class AppController {
         app.setUserId(loginUser.getId());
         // 应用名称暂时为 initPrompt 前 12 位
         app.setAppName(initPrompt.substring(0, Math.min(initPrompt.length(), 12)));
-        app.setCodeGenType(CodeGenTypeEnum.MULTI_FILE.getValue());
+        app.setCodeGenType(CodeGenTypeEnum.HTML.getValue());
         boolean result = appService.save(app);
         ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
         return ResultUtils.success(app.getId());
