@@ -4,7 +4,7 @@ import com.mybatisflex.core.query.QueryWrapper;
 import com.mybatisflex.core.service.IService;
 import com.shikou.aicode.model.vo.LoginUserVO;
 import com.shikou.aicode.model.vo.UserVO;
-import com.shikou.aicode.model.dto.UserQueryRequest;
+import com.shikou.aicode.model.dto.user.UserQueryRequest;
 import com.shikou.aicode.model.entity.User;
 import jakarta.servlet.http.HttpServletRequest;
 

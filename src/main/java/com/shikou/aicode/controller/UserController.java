@@ -10,7 +10,7 @@ import com.shikou.aicode.constant.UserConstant;
 import com.shikou.aicode.exception.BusinessException;
 import com.shikou.aicode.exception.ErrorCode;
 import com.shikou.aicode.exception.ThrowUtils;
-import com.shikou.aicode.model.dto.*;
+import com.shikou.aicode.model.dto.user.*;
 import com.shikou.aicode.model.entity.User;
 import com.shikou.aicode.model.vo.LoginUserVO;
 import com.shikou.aicode.model.vo.UserVO;

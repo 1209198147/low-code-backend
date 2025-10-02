@@ -9,7 +9,7 @@ import com.shikou.aicode.model.vo.LoginUserVO;
 import com.shikou.aicode.model.vo.UserVO;
 import com.shikou.aicode.exception.BusinessException;
 import com.shikou.aicode.exception.ErrorCode;
-import com.shikou.aicode.model.dto.UserQueryRequest;
+import com.shikou.aicode.model.dto.user.UserQueryRequest;
 import com.shikou.aicode.model.entity.User;
 import com.shikou.aicode.mapper.UserMapper;
 import com.shikou.aicode.model.enums.UserRoleEnum;

@@ -1,4 +1,4 @@
-package com.shikou.aicode.model.dto;
+package com.shikou.aicode.model.dto.user;
 
 import lombok.Data;
 
