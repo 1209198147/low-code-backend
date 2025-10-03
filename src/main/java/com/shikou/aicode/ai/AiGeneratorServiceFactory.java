@@ -1,9 +1,15 @@
 package com.shikou.aicode.ai;
 
+import cn.hutool.core.util.StrUtil;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import com.shikou.aicode.ai.tool.WriteFileTool;
+import com.shikou.aicode.exception.BusinessException;
+import com.shikou.aicode.exception.ErrorCode;
+import com.shikou.aicode.model.enums.CodeGenTypeEnum;
 import com.shikou.aicode.service.ChatHistoryService;
 import dev.langchain4j.community.store.memory.chat.redis.RedisChatMemoryStore;
+import dev.langchain4j.data.message.ToolExecutionResultMessage;
 import dev.langchain4j.memory.chat.MessageWindowChatMemory;
 import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.chat.StreamingChatModel;
@@ -22,7 +28,10 @@ public class AiGeneratorServiceFactory {
     private ChatModel chatModel;
 
     @Resource
-    private StreamingChatModel streamingChatModel;
+    private StreamingChatModel openAiStreamingChatModel;
+
+    @Resource
+    private StreamingChatModel reasoningStreamingChatModel;
 
     @Resource
     private RedisChatMemoryStore redisChatMemoryStore;
@@ -30,7 +39,7 @@ public class AiGeneratorServiceFactory {
     @Resource
     private ChatHistoryService chatHistoryService;
 
-    private final Cache<Long, AiGeneratorService> serviceCache = Caffeine.newBuilder()
+    private final Cache<String, AiGeneratorService> serviceCache = Caffeine.newBuilder()
             .maximumSize(1000)
             .expireAfterWrite(Duration.ofMinutes(30))
             .expireAfterAccess(Duration.ofMinutes(10))
@@ -38,21 +47,41 @@ public class AiGeneratorServiceFactory {
                 log.debug("AI Service被移除 appId：{} 原因：{}", key, cause);
             }).build();
 
-    public AiGeneratorService getAiGeneratorService(Long appId){
-        return serviceCache.get(appId, this::createAiCodeGeneratorService);
+    public AiGeneratorService getAiGeneratorService(Long appId, CodeGenTypeEnum typeEnum){
+        String cacheKey = getkey(appId, typeEnum);
+        return serviceCache.get(cacheKey, key -> createAiCodeGeneratorService(appId, typeEnum));
     }
 
-    public AiGeneratorService createAiCodeGeneratorService(Long appId) {
+    public AiGeneratorService createAiCodeGeneratorService(Long appId, CodeGenTypeEnum typeEnum) {
         MessageWindowChatMemory chatMemory = MessageWindowChatMemory.builder()
                 .id(appId)
                 .chatMemoryStore(redisChatMemoryStore)
                 .maxMessages(20)
                 .build();
         chatHistoryService.loadChatHistoryToMemory(appId, chatMemory, 20);
-        return AiServices.builder(AiGeneratorService.class)
-                .chatModel(chatModel)
-                .streamingChatModel(streamingChatModel)
-                .chatMemory(chatMemory)
-                .build();
+
+        return switch (typeEnum){
+            case HTML, MULTI_FILE -> AiServices.builder(AiGeneratorService.class)
+                    .chatModel(chatModel)
+                    .streamingChatModel(openAiStreamingChatModel)
+                    .chatMemory(chatMemory)
+                    .build();
+            case VUE_PROJECT -> AiServices.builder(AiGeneratorService.class)
+                    .chatModel(chatModel)
+                    .streamingChatModel(reasoningStreamingChatModel)
+                    .chatMemoryProvider(memoryId -> chatMemory)
+                    .tools(
+                            new WriteFileTool()
+                    )
+                    .hallucinatedToolNameStrategy(toolExecutionRequest -> ToolExecutionResultMessage.from(
+                            toolExecutionRequest, "Erorr: there is no tool called " + toolExecutionRequest.name()
+                    ))
+                    .build();
+            default -> throw new BusinessException(ErrorCode.PARAMS_ERROR, "不支持的代码生成类型");
+        };
+    }
+
+    private String getkey(Long appId, CodeGenTypeEnum typeEnum){
+        return StrUtil.format("{}_{}", typeEnum.getValue(), appId);
     }
 }

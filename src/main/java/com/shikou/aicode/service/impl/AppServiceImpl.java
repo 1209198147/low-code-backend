@@ -8,6 +8,8 @@ import com.mybatisflex.core.query.QueryWrapper;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
 import com.shikou.aicode.constant.AppConstant;
 import com.shikou.aicode.core.AiGeneratorFacade;
+import com.shikou.aicode.core.builder.VueProjectBuilder;
+import com.shikou.aicode.core.handler.StreamMessageExecutor;
 import com.shikou.aicode.exception.BusinessException;
 import com.shikou.aicode.exception.ErrorCode;
 import com.shikou.aicode.exception.ThrowUtils;
@@ -124,19 +126,8 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App>  implements AppS
         // 添加用户消息
         chatHistoryService.addMessage(loginUser.getId(), appId, MessageTypeEnum.USER, message);
         Flux<String> stream = aiGeneratorFacade.generateCodeAndSave(message, codeGenTypeEnum, appId);
-        StringBuilder messageBuilder = new StringBuilder();
         // 保存AI回复
-        return stream.map(chunk->{
-            messageBuilder.append(chunk);
-            return chunk;
-        }).doOnComplete(()->{
-            String aiMessage = messageBuilder.toString();
-            chatHistoryService.addMessage(loginUser.getId(), appId, MessageTypeEnum.AI, aiMessage);
-        }).doOnError(error -> {
-            // 如果 AI 回复失败，也需要保存记录到数据库中
-            String errorMessage = "AI 回复失败：" + error.getMessage();
-            chatHistoryService.addMessage(loginUser.getId(), appId, MessageTypeEnum.AI, errorMessage);
-        });
+        return StreamMessageExecutor.doExecute(stream, chatHistoryService, appId, loginUser, codeGenTypeEnum);
     }
 
     @Override
@@ -163,6 +154,17 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App>  implements AppS
             ThrowUtils.throwIf(!FileUtil.exist(sourceDir), ErrorCode.NOT_FOUND_ERROR, "应用未生成,请先生成应用");
             String deployPath = AppConstant.CODE_DEPLOY_ROOT_DIR + File.separator + deployKey;
             File deployDir = new File(deployPath);
+            CodeGenTypeEnum typeEnum = CodeGenTypeEnum.getEnumByValue(app.getCodeGenType());
+            if(CodeGenTypeEnum.VUE_PROJECT.equals(typeEnum)){
+                boolean success = VueProjectBuilder.buildProject(sourcePath);
+                ThrowUtils.throwIf(!success, ErrorCode.SYSTEM_ERROR, "vue项目构建失败");
+                File distDir = new File(sourcePath, "dist");
+                if(!distDir.exists()){
+                    throw new BusinessException(ErrorCode.SYSTEM_ERROR, "构建完成，但未能找到dist文件夹");
+                }
+                sourceDir = distDir;
+                log.info("vue项目构建成功，部署dist文件夹: {}", distDir.getAbsolutePath());
+            }
             FileUtil.copyContent(sourceDir, deployDir, true);
         } catch (Exception e) {
             throw new BusinessException(ErrorCode.SYSTEM_ERROR, "应用部署失败：" + e.getMessage());
