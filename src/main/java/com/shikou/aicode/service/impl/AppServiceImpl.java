@@ -1,6 +1,7 @@
 package com.shikou.aicode.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.collection.CollectionUtil;
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.util.RandomUtil;
 import cn.hutool.core.util.StrUtil;
@@ -13,9 +14,9 @@ import com.shikou.aicode.core.handler.StreamMessageExecutor;
 import com.shikou.aicode.exception.BusinessException;
 import com.shikou.aicode.exception.ErrorCode;
 import com.shikou.aicode.exception.ThrowUtils;
+import com.shikou.aicode.mapper.AppMapper;
 import com.shikou.aicode.model.dto.app.AppQueryRequest;
 import com.shikou.aicode.model.entity.App;
-import com.shikou.aicode.mapper.AppMapper;
 import com.shikou.aicode.model.entity.User;
 import com.shikou.aicode.model.enums.CodeGenTypeEnum;
 import com.shikou.aicode.model.enums.MessageTypeEnum;
@@ -96,6 +97,9 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App>  implements AppS
 
     @Override
     public List<AppVO> getAppVOList(List<App> records) {
+        if (CollectionUtil.isEmpty(records)){
+            return CollectionUtil.empty(List.class);
+        }
         // 批量获取UserId
         Set<Long> userIds = records.stream().map(App::getUserId).collect(Collectors.toSet());
         Map<Long, UserVO> map = userService.listByIds(userIds).stream()
