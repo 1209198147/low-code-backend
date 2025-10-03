@@ -24,6 +24,7 @@ import com.shikou.aicode.model.vo.AppVO;
 import com.shikou.aicode.model.vo.UserVO;
 import com.shikou.aicode.service.AppService;
 import com.shikou.aicode.service.ChatHistoryService;
+import com.shikou.aicode.service.ScreenShotService;
 import com.shikou.aicode.service.UserService;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
@@ -53,6 +54,8 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App>  implements AppS
     private AiGeneratorFacade aiGeneratorFacade;
     @Resource
     private ChatHistoryService chatHistoryService;
+    @Resource
+    private ScreenShotService screenShotService;
 
     @Override
     public AppVO getAppVO(App app) {
@@ -180,7 +183,21 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App>  implements AppS
         updateApp.setDeployedTime(LocalDateTime.now());
         boolean result = updateById(updateApp);
         ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR, "更新应用部署信息失败");
-        return String.format("%s/%s", AppConstant.CODE_DEPLOY_HOST, deployKey);
+        String deployUrl = String.format("%s/%s", AppConstant.CODE_DEPLOY_HOST, deployKey);
+        generateAppScreenshotAsync(appId, deployUrl);
+        return deployUrl;
+    }
+
+    @Override
+    public void generateAppScreenshotAsync(Long appId, String appUrl) {
+        Thread.startVirtualThread(() -> {
+            String screenshotUrl = screenShotService.generateAndUploadScreenshot(appUrl);
+            App updateApp = new App();
+            updateApp.setId(appId);
+            updateApp.setCover(screenshotUrl);
+            boolean updated = this.updateById(updateApp);
+            ThrowUtils.throwIf(!updated, ErrorCode.OPERATION_ERROR, "更新应用封面字段失败");
+        });
     }
 
     @Override
