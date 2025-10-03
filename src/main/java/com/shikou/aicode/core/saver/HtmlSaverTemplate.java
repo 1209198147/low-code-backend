@@ -1,6 +1,5 @@
 package com.shikou.aicode.core.saver;
 
-import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.util.StrUtil;
 import com.shikou.aicode.ai.model.HtmlResult;
 import com.shikou.aicode.exception.BusinessException;

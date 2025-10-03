@@ -3,16 +3,29 @@ spring:
     active: local
   application:
     name: ai-code-backend
+  session:
+    store-type: redis
+    timeout: 2592000
   # mysql
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://localhost:3306/ai_code
     username: root
     password: 123456
+  data:
+    # redis
+    redis:
+      host: localhost
+      password:
+      port: 6379
+      ttl: 3600
 server:
   port: 8123
   servlet:
     context-path: /api
+    session:
+      cookie:
+        max-age: 2592000
 # springdoc-openapi
 springdoc:
   group-configs:

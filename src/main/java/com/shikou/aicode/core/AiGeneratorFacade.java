@@ -1,6 +1,7 @@
 package com.shikou.aicode.core;
 
 import com.shikou.aicode.ai.AiGeneratorService;
+import com.shikou.aicode.ai.AiGeneratorServiceFactory;
 import com.shikou.aicode.core.parser.ParserExecutor;
 import com.shikou.aicode.core.saver.SaverExecutor;
 import com.shikou.aicode.exception.BusinessException;
@@ -15,11 +16,13 @@ import reactor.core.publisher.Flux;
 @Service
 @Slf4j
 public class AiGeneratorFacade {
+
     @Resource
-    private AiGeneratorService aiGeneratorService;
+    private AiGeneratorServiceFactory aiGeneratorServiceFactory;
 
     public Flux<String> generateCodeAndSave(String userMessage, CodeGenTypeEnum codeGenTypeEnum, Long appId){
         ThrowUtils.throwIf(codeGenTypeEnum == null, ErrorCode.PARAMS_ERROR, "生成的代码类型不能为空");
+        AiGeneratorService aiGeneratorService = aiGeneratorServiceFactory.getAiGeneratorService(appId);
         return switch (codeGenTypeEnum){
             case HTML -> {
                 Flux<String> stream = aiGeneratorService.generateHtmlStream(userMessage);
@@ -41,9 +44,14 @@ public class AiGeneratorFacade {
         return stream.doOnNext(chunk->{
             codeBuilder.append(chunk);
         }).doOnComplete(()->{
-            String completeCode = codeBuilder.toString();
-            Object result = ParserExecutor.executeParser(completeCode, codeGenTypeEnum);
-            SaverExecutor.executeSaver(result, codeGenTypeEnum, appId);
+            // 整理要用try，不然ai返回的内容可能没有代码，会直接报错
+            try{
+                String completeCode = codeBuilder.toString();
+                Object result = ParserExecutor.executeParser(completeCode, codeGenTypeEnum);
+                SaverExecutor.executeSaver(result, codeGenTypeEnum, appId);
+            } catch (Exception e){
+                log.error("保存代码失败 {}", e.getMessage(), e);
+            }
         });
     }
 }

@@ -16,16 +16,20 @@ import com.shikou.aicode.model.entity.App;
 import com.shikou.aicode.mapper.AppMapper;
 import com.shikou.aicode.model.entity.User;
 import com.shikou.aicode.model.enums.CodeGenTypeEnum;
+import com.shikou.aicode.model.enums.MessageTypeEnum;
 import com.shikou.aicode.model.vo.AppVO;
 import com.shikou.aicode.model.vo.UserVO;
 import com.shikou.aicode.service.AppService;
+import com.shikou.aicode.service.ChatHistoryService;
 import com.shikou.aicode.service.UserService;
 import jakarta.annotation.Resource;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 
 import java.io.File;
+import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -38,11 +42,14 @@ import java.util.stream.Collectors;
  * @author Shikou
  */
 @Service
+@Slf4j
 public class AppServiceImpl extends ServiceImpl<AppMapper, App>  implements AppService{
     @Resource
     private UserService userService;
     @Resource
     private AiGeneratorFacade aiGeneratorFacade;
+    @Resource
+    private ChatHistoryService chatHistoryService;
 
     @Override
     public AppVO getAppVO(App app) {
@@ -114,7 +121,22 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App>  implements AppS
         if (codeGenTypeEnum == null) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "应用代码生成类型错误");
         }
-        return aiGeneratorFacade.generateCodeAndSave(message, codeGenTypeEnum, appId);
+        // 添加用户消息
+        chatHistoryService.addMessage(loginUser.getId(), appId, MessageTypeEnum.USER, message);
+        Flux<String> stream = aiGeneratorFacade.generateCodeAndSave(message, codeGenTypeEnum, appId);
+        StringBuilder messageBuilder = new StringBuilder();
+        // 保存AI回复
+        return stream.map(chunk->{
+            messageBuilder.append(chunk);
+            return chunk;
+        }).doOnComplete(()->{
+            String aiMessage = messageBuilder.toString();
+            chatHistoryService.addMessage(loginUser.getId(), appId, MessageTypeEnum.AI, aiMessage);
+        }).doOnError(error -> {
+            // 如果 AI 回复失败，也需要保存记录到数据库中
+            String errorMessage = "AI 回复失败：" + error.getMessage();
+            chatHistoryService.addMessage(loginUser.getId(), appId, MessageTypeEnum.AI, errorMessage);
+        });
     }
 
     @Override
@@ -153,5 +175,20 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App>  implements AppS
         boolean result = updateById(updateApp);
         ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR, "更新应用部署信息失败");
         return String.format("%s/%s", AppConstant.CODE_DEPLOY_HOST, deployKey);
+    }
+
+    @Override
+    public boolean removeById(Serializable id) {
+        ThrowUtils.throwIf(id == null, ErrorCode.PARAMS_ERROR, "id不能为空");
+        Long appId = (Long) id;
+        if(appId < 1){
+            return false;
+        }
+        try{
+            chatHistoryService.deleteByAppId(appId);
+        }catch (Exception e){
+            log.error("删除应用对应历史对话记录失败 {}", e.getMessage());
+        }
+        return super.removeById(id);
     }
 }

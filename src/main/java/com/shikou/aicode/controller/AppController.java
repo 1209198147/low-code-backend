@@ -18,6 +18,7 @@ import com.shikou.aicode.model.dto.app.*;
 import com.shikou.aicode.model.entity.User;
 import com.shikou.aicode.model.enums.CodeGenTypeEnum;
 import com.shikou.aicode.model.vo.AppVO;
+import com.shikou.aicode.service.ChatHistoryService;
 import com.shikou.aicode.service.UserService;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
@@ -47,6 +48,8 @@ public class AppController {
     private AppService appService;
     @Resource
     private UserService userService;
+    @Resource
+    private ChatHistoryService chatHistoryService;
 
     @GetMapping(value = "/chat/gen/code", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<ServerSentEvent<String>> chatToGenCode(@RequestParam Long appId,
