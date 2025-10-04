@@ -9,7 +9,7 @@ import java.util.regex.Pattern;
 public class HtmlParser implements Parser<HtmlResult>{
     private static final Pattern PATTERN = Pattern.compile("```html\\s*\\n([\\s\\S]*?)```", Pattern.CASE_INSENSITIVE);
     @Override
-    public HtmlResult parser(String content) {
+    public HtmlResult parse(String content) {
         HtmlResult htmlResult = new HtmlResult();
         String html = extractHtml(content);
         if(StringUtils.isEmpty(content)){

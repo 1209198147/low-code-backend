@@ -58,7 +58,7 @@ public class AiGeneratorFacade {
             // 整理要用try，不然ai返回的内容可能没有代码，会直接报错
             try{
                 String completeCode = codeBuilder.toString();
-                Object result = ParserExecutor.executeParser(completeCode, codeGenTypeEnum);
+                Object result = ParserExecutor.executeParse(completeCode, codeGenTypeEnum);
                 SaverExecutor.executeSaver(result, codeGenTypeEnum, appId);
             } catch (Exception e){
                 log.error("保存代码失败 {}", e.getMessage(), e);

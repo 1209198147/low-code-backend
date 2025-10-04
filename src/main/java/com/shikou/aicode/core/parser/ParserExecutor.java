@@ -18,9 +18,9 @@ public class ParserExecutor {
         parserMap.put(CodeGenTypeEnum.MULTI_FILE, mutiFileParser);
     }
 
-    public static Object executeParser(String content, CodeGenTypeEnum codeGenTypeEnum) {
+    public static Object executeParse(String content, CodeGenTypeEnum codeGenTypeEnum) {
         Parser parser = parserMap.get(codeGenTypeEnum);
         ThrowUtils.throwIf(parser == null, ErrorCode.PARAMS_ERROR, "不支持的代码生成类型");
-        return parser.parser(content);
+        return parser.parse(content);
     }
 }

@@ -13,7 +13,7 @@ public class MutiFileParser implements Parser<MultiFileResult>{
 
 
     @Override
-    public MultiFileResult parser(String content) {
+    public MultiFileResult parse(String content) {
         MultiFileResult multiFileResult = new MultiFileResult();
         String html = extractHtml(content);
         String css = extractCss(content);

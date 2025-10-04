@@ -6,5 +6,5 @@ public interface Parser<T> {
      * @param content
      * @return 对应的类型
      */
-    T parser(String content);
+    T parse(String content);
 }
