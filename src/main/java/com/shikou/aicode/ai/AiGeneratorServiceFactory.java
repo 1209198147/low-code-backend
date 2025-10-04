@@ -3,6 +3,7 @@ package com.shikou.aicode.ai;
 import cn.hutool.core.util.StrUtil;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import com.shikou.aicode.ai.tool.ToolManager;
 import com.shikou.aicode.ai.tool.WriteFileTool;
 import com.shikou.aicode.exception.BusinessException;
 import com.shikou.aicode.exception.ErrorCode;
@@ -39,6 +40,9 @@ public class AiGeneratorServiceFactory {
     @Resource
     private ChatHistoryService chatHistoryService;
 
+    @Resource
+    private ToolManager toolManager;
+
     private final Cache<String, AiGeneratorService> serviceCache = Caffeine.newBuilder()
             .maximumSize(1000)
             .expireAfterWrite(Duration.ofMinutes(30))
@@ -70,9 +74,7 @@ public class AiGeneratorServiceFactory {
                     .chatModel(chatModel)
                     .streamingChatModel(reasoningStreamingChatModel)
                     .chatMemoryProvider(memoryId -> chatMemory)
-                    .tools(
-                            new WriteFileTool()
-                    )
+                    .tools(toolManager.getTools())
                     .hallucinatedToolNameStrategy(toolExecutionRequest -> ToolExecutionResultMessage.from(
                             toolExecutionRequest, "Erorr: there is no tool called " + toolExecutionRequest.name()
                     ))

@@ -5,6 +5,8 @@ import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.shikou.aicode.ai.model.message.*;
+import com.shikou.aicode.ai.tool.BaseTool;
+import com.shikou.aicode.ai.tool.ToolManager;
 import com.shikou.aicode.constant.AppConstant;
 import com.shikou.aicode.core.builder.VueProjectBuilder;
 import com.shikou.aicode.model.entity.User;
@@ -57,24 +59,20 @@ public class JsonMessageStreamHandler {
             case TOOL_REQUEST -> {
                 ToolRequestMessage toolRequestMessage = JSONUtil.toBean(chunk, ToolRequestMessage.class);
                 String id = toolRequestMessage.getId();
-                if(id!=null && !seenToolIds.contains(id)){
+                String name = toolRequestMessage.getName();
+                BaseTool tool = ToolManager.getTool(name);
+                if(id!=null && !seenToolIds.contains(id) && tool!=null){
                     seenToolIds.add(id);
-                    return "\n\n[选择工具] 写入文件\n\n";
+                    return tool.getToolRequestResponse();
                 }
                 return "";
             }
             case TOOL_EXECUTED -> {
                 ToolExecutedMessage toolExecutedMessage = JSONUtil.toBean(chunk, ToolExecutedMessage.class);
-                JSONObject jsonObject = JSONUtil.parseObj(toolExecutedMessage.getArguments());
-                String relativeFilePath = jsonObject.getStr("relativeFilePath");
-                String suffix = FileUtil.getSuffix(relativeFilePath);
-                String content = jsonObject.getStr("content");
-                String result = String.format("""
-                        [工具调用] 写入文件 %s
-                        ```%s
-                        %s
-                        ```
-                        """, relativeFilePath, suffix, content);
+                String name = toolExecutedMessage.getName();
+                BaseTool tool = ToolManager.getTool(name);
+                JSONObject arguments = JSONUtil.parseObj(toolExecutedMessage.getArguments());
+                String result = tool.getToolExecutedResult(arguments);
                 String output = String.format("\n\n%s\n\n", result);
                 chatHistoryStringBuilder.append(output);
                 return output;
