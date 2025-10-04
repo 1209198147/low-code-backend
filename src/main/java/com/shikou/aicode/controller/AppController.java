@@ -17,11 +17,14 @@ import com.shikou.aicode.exception.ThrowUtils;
 import com.shikou.aicode.model.dto.app.*;
 import com.shikou.aicode.model.entity.User;
 import com.shikou.aicode.model.enums.CodeGenTypeEnum;
+import com.shikou.aicode.model.enums.UserRoleEnum;
 import com.shikou.aicode.model.vo.AppVO;
 import com.shikou.aicode.service.ChatHistoryService;
+import com.shikou.aicode.service.ProjectDownloadService;
 import com.shikou.aicode.service.UserService;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.MediaType;
 import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.web.bind.annotation.*;
@@ -31,6 +34,7 @@ import com.shikou.aicode.service.AppService;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.io.File;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -49,7 +53,7 @@ public class AppController {
     @Resource
     private UserService userService;
     @Resource
-    private ChatHistoryService chatHistoryService;
+    private ProjectDownloadService projectDownloadService;
 
     @GetMapping(value = "/chat/gen/code", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<ServerSentEvent<String>> chatToGenCode(@RequestParam Long appId,
@@ -95,6 +99,25 @@ public class AppController {
         return ResultUtils.success(deployUrl);
     }
 
+    @GetMapping("/download/{appId}")
+    public void downloadApp(@PathVariable Long appId,
+                            HttpServletRequest request,
+                            HttpServletResponse response){
+        ThrowUtils.throwIf(appId==null, ErrorCode.PARAMS_ERROR, "应用ID不能为空");
+        App app = appService.getById(appId);
+        ThrowUtils.throwIf(app==null, ErrorCode.NOT_FOUND_ERROR, "应用不存在");
+        User loginUser = userService.getLoginUser(request);
+        UserRoleEnum role = UserRoleEnum.getEnumByValue(loginUser.getUserRole());
+        if(!UserRoleEnum.ADMIN.equals(role)){
+            ThrowUtils.throwIf(!app.getUserId().equals(loginUser.getId()), ErrorCode.NO_AUTH_ERROR, "不能下载别人应用的源码");
+        }
+        String projectPath = AppConstant.CODE_OUTPUT_ROOT_DIR + File.separator + StrUtil.format("{}_{}", app.getCodeGenType(), appId);
+        File projectDir = new File(projectPath);
+        ThrowUtils.throwIf(!projectDir.exists(), ErrorCode.NOT_FOUND_ERROR, "应用不存在，请重新生成代码");
+        String downloadFileName = String.valueOf(appId);
+        projectDownloadService.downloadProjectAsZip(projectPath, downloadFileName, response);
+    }
+
     @PostMapping("/add")
     public BaseResponse<Long> addApp(@RequestBody AppAddRequest appAddRequest, HttpServletRequest request) {
         ThrowUtils.throwIf(appAddRequest == null, ErrorCode.PARAMS_ERROR);
@@ -107,7 +130,7 @@ public class AppController {
         app.setUserId(loginUser.getId());
         // 应用名称暂时为 initPrompt 前 12 位
         app.setAppName(initPrompt.substring(0, Math.min(initPrompt.length(), 12)));
-        app.setCodeGenType(CodeGenTypeEnum.VUE_PROJECT.getValue());
+        app.setCodeGenType(CodeGenTypeEnum.HTML.getValue());
         boolean result = appService.save(app);
         ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
         return ResultUtils.success(app.getId());

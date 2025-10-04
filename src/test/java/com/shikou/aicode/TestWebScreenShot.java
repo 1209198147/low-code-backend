@@ -22,6 +22,7 @@ public class TestWebScreenShot {
     public void testScreenShotService(){
         String url = "https://www.bilibili.com/";
         String cosUrl = screenShotService.generateAndUploadScreenshot(url);
+        System.out.println(cosUrl);
         Assertions.assertNotEquals(cosUrl, null);
     }
 }
