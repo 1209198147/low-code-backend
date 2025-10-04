@@ -7,6 +7,7 @@ import cn.hutool.core.util.RandomUtil;
 import cn.hutool.core.util.StrUtil;
 import com.mybatisflex.core.query.QueryWrapper;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
+import com.shikou.aicode.ai.AiCodeGenTypeRoutingService;
 import com.shikou.aicode.constant.AppConstant;
 import com.shikou.aicode.core.AiGeneratorFacade;
 import com.shikou.aicode.core.builder.VueProjectBuilder;
@@ -15,6 +16,7 @@ import com.shikou.aicode.exception.BusinessException;
 import com.shikou.aicode.exception.ErrorCode;
 import com.shikou.aicode.exception.ThrowUtils;
 import com.shikou.aicode.mapper.AppMapper;
+import com.shikou.aicode.model.dto.app.AppAddRequest;
 import com.shikou.aicode.model.dto.app.AppQueryRequest;
 import com.shikou.aicode.model.entity.App;
 import com.shikou.aicode.model.entity.User;
@@ -27,6 +29,7 @@ import com.shikou.aicode.service.ChatHistoryService;
 import com.shikou.aicode.service.ScreenShotService;
 import com.shikou.aicode.service.UserService;
 import jakarta.annotation.Resource;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
@@ -56,6 +59,27 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App>  implements AppS
     private ChatHistoryService chatHistoryService;
     @Resource
     private ScreenShotService screenShotService;
+    @Resource
+    private AiCodeGenTypeRoutingService aiCodeGenTypeRoutingService;
+
+    @Override
+    public Long createApp(AppAddRequest appAddRequest, HttpServletRequest request){
+        User loginUser = userService.getLoginUser(request);
+        String initPrompt = appAddRequest.getInitPrompt();
+        ThrowUtils.throwIf(StrUtil.isBlank(initPrompt), ErrorCode.PARAMS_ERROR, "初始化 prompt 不能为空");
+
+        App app = new App();
+        BeanUtil.copyProperties(appAddRequest, app);
+        app.setUserId(loginUser.getId());
+        // 应用名称暂时为 initPrompt 前 12 位
+        app.setAppName(initPrompt.substring(0, Math.min(initPrompt.length(), 12)));
+        CodeGenTypeEnum typeEnum = aiCodeGenTypeRoutingService.routeCodeGenType(initPrompt);
+        app.setCodeGenType(typeEnum.getValue());
+        boolean result = save(app);
+        ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
+        log.info("创建应用成功 appId: {} 类型: {}", app.getId(), typeEnum.getText());
+        return app.getId();
+    }
 
     @Override
     public AppVO getAppVO(App app) {

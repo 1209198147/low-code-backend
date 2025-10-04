@@ -2,10 +2,12 @@ package com.shikou.aicode.service;
 
 import com.mybatisflex.core.query.QueryWrapper;
 import com.mybatisflex.core.service.IService;
+import com.shikou.aicode.model.dto.app.AppAddRequest;
 import com.shikou.aicode.model.dto.app.AppQueryRequest;
 import com.shikou.aicode.model.entity.App;
 import com.shikou.aicode.model.entity.User;
 import com.shikou.aicode.model.vo.AppVO;
+import jakarta.servlet.http.HttpServletRequest;
 import reactor.core.publisher.Flux;
 
 import java.util.List;
@@ -16,6 +18,8 @@ import java.util.List;
  * @author Shikou
  */
 public interface AppService extends IService<App> {
+
+    Long createApp(AppAddRequest appAddRequest, HttpServletRequest request);
 
     AppVO getAppVO(App app);
 
