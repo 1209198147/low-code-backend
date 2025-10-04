@@ -3,7 +3,7 @@ package com.shikou.aicode.utils;
 import cn.hutool.core.img.ImgUtil;
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.util.RandomUtil;
-import cn.hutool.core.util.StrUtil;
+import com.shikou.aicode.constant.AppConstant;
 import com.shikou.aicode.exception.BusinessException;
 import com.shikou.aicode.exception.ErrorCode;
 import io.github.bonigarcia.wdm.WebDriverManager;
@@ -37,7 +37,7 @@ public class WebScreenshotUtils {
             return null;
         }
         try{
-            String rootPath = System.getProperty("user.dir") + File.separator + "temp" + File.separator + "screenshots";
+            String rootPath = AppConstant.TEMP_SCREEN_SHOT_DIR;
             String screenShotDir = rootPath + File.separator + UUID.randomUUID().toString().substring(0, 8);
             FileUtil.mkdir(screenShotDir);
             final String SUFFIX = ".png";
