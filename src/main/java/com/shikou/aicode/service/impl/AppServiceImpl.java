@@ -24,6 +24,7 @@ import com.shikou.aicode.model.enums.CodeGenTypeEnum;
 import com.shikou.aicode.model.enums.MessageTypeEnum;
 import com.shikou.aicode.model.vo.AppVO;
 import com.shikou.aicode.model.vo.UserVO;
+import com.shikou.aicode.mq.producer.ScreenShotMessageProducer;
 import com.shikou.aicode.service.AppService;
 import com.shikou.aicode.service.ChatHistoryService;
 import com.shikou.aicode.service.ScreenShotService;
@@ -61,6 +62,8 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App>  implements AppS
     private ScreenShotService screenShotService;
     @Resource
     private AiCodeGenTypeRoutingService aiCodeGenTypeRoutingService;
+    @Resource
+    private ScreenShotMessageProducer screenShotMessageProducer;
 
     @Override
     public Long createApp(AppAddRequest appAddRequest, HttpServletRequest request){
@@ -208,11 +211,12 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App>  implements AppS
         boolean result = updateById(updateApp);
         ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR, "更新应用部署信息失败");
         String deployUrl = String.format("%s/%s", AppConstant.CODE_DEPLOY_HOST, deployKey);
-        generateAppScreenshotAsync(appId, deployUrl);
+        screenShotMessageProducer.sendScreenShotMessage(deployUrl, appId);
         return deployUrl;
     }
 
     @Override
+    @Deprecated
     public void generateAppScreenshotAsync(Long appId, String appUrl) {
         Thread.startVirtualThread(() -> {
             String screenshotUrl = screenShotService.generateAndUploadScreenshot(appUrl);
@@ -222,6 +226,15 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App>  implements AppS
             boolean updated = this.updateById(updateApp);
             ThrowUtils.throwIf(!updated, ErrorCode.OPERATION_ERROR, "更新应用封面字段失败");
         });
+    }
+
+    @Override
+    public void updateCover(Long appId, String coverUrl){
+        App updateApp = new App();
+        updateApp.setId(appId);
+        updateApp.setCover(coverUrl);
+        boolean updated = this.updateById(updateApp);
+        ThrowUtils.throwIf(!updated, ErrorCode.OPERATION_ERROR, "更新应用封面字段失败");
     }
 
     @Override
