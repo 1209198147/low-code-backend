@@ -74,8 +74,11 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App>  implements AppS
         BeanUtil.copyProperties(appAddRequest, app);
         app.setUserId(loginUser.getId());
         // 应用名称暂时为 initPrompt 前 12 位
-        app.setAppName(initPrompt.substring(0, Math.min(initPrompt.length(), 12)));
+//        app.setAppName(initPrompt.substring(0, Math.min(initPrompt.length(), 12)));
         AiCodeGenTypeRoutingService aiCodeGenTypeRoutingService = AiCodeGenTypeRoutingServiceFactory.createAiCodeGenTypeRoutingService();
+        // 生成应用名称
+        String appName = aiCodeGenTypeRoutingService.generateAppName(initPrompt);
+        app.setAppName(appName);
         CodeGenTypeEnum typeEnum = aiCodeGenTypeRoutingService.routeCodeGenType(initPrompt);
         app.setCodeGenType(typeEnum.getValue());
         boolean result = save(app);

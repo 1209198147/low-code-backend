@@ -23,7 +23,7 @@ public class ScreenShotListener {
     @Resource
     private AppService appService;
 
-    @RabbitListener(queues = "screenShotQueue")
+    @RabbitListener(queues = "screenShotQueue", ackMode = "MANUAL")
     public void receiveScreenShotMessage(Message message, Channel channel){
         long deliveryTag = message.getMessageProperties().getDeliveryTag();
         try{
