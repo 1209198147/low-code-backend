@@ -23,4 +23,6 @@ public interface UserConstant {
     String ADMIN_ROLE = "admin";
     
     // endregion
+
+    String ATTENDANCE_KEY = "user:attendance:";
 }

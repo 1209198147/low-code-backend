@@ -17,9 +17,16 @@ import com.shikou.aicode.model.vo.UserVO;
 import com.shikou.aicode.service.UserService;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
+import org.redisson.api.RBitSet;
+import org.redisson.api.RedissonClient;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.Duration;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.BitSet;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 用户 控制层。
@@ -31,6 +38,8 @@ public class UserController {
 
     @Resource
     private UserService userService;
+    @Resource
+    private RedissonClient redissonClient;
 
     /**
      * 用户注册
@@ -81,6 +90,36 @@ public class UserController {
         ThrowUtils.throwIf(request == null, ErrorCode.PARAMS_ERROR);
         boolean result = userService.userLogout(request);
         return ResultUtils.success(result);
+    }
+
+    @PostMapping("/attendance")
+    public BaseResponse<Boolean> userAttendance(HttpServletRequest request) {
+        ThrowUtils.throwIf(request == null, ErrorCode.PARAMS_ERROR);
+        User loginUser = userService.getLoginUser(request);
+        LocalDate today = LocalDate.now();
+        int index = today.getDayOfYear();
+
+        String key = UserConstant.ATTENDANCE_KEY + today.getYear() + ":" + loginUser.getId();
+        RBitSet bitSet = redissonClient.getBitSet(key);
+        BitSet bs = bitSet.asBitSet();
+        if(bs.get(index)){
+            return ResultUtils.success(true, "重复签到");
+        }
+        bitSet.set(index);
+        bitSet.expire(Duration.ofDays(today.lengthOfYear()-index+1));
+        return ResultUtils.success(true);
+    }
+
+    @GetMapping("/list/attendance")
+    public BaseResponse<List<Integer>> getAttendance(HttpServletRequest request) {
+        ThrowUtils.throwIf(request == null, ErrorCode.PARAMS_ERROR);
+        User loginUser = userService.getLoginUser(request);
+        String key = UserConstant.ATTENDANCE_KEY + LocalDate.now().getYear() + ":" + loginUser.getId();
+        RBitSet bitSet = redissonClient.getBitSet(key);
+        BitSet bs = bitSet.asBitSet();
+        List<Integer> attendanceList = new ArrayList<>();
+        bs.stream().forEach(attendanceList::add);
+        return ResultUtils.success(attendanceList);
     }
 
     /**
