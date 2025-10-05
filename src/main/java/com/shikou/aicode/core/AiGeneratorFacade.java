@@ -1,11 +1,14 @@
 package com.shikou.aicode.core;
 
+import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONUtil;
 import com.shikou.aicode.ai.AiGeneratorService;
 import com.shikou.aicode.ai.AiGeneratorServiceFactory;
 import com.shikou.aicode.ai.model.message.AiResponseMessage;
 import com.shikou.aicode.ai.model.message.ToolExecutedMessage;
 import com.shikou.aicode.ai.model.message.ToolRequestMessage;
+import com.shikou.aicode.constant.AppConstant;
+import com.shikou.aicode.core.builder.VueProjectBuilder;
 import com.shikou.aicode.core.parser.ParserExecutor;
 import com.shikou.aicode.core.saver.SaverExecutor;
 import com.shikou.aicode.exception.BusinessException;
@@ -19,6 +22,8 @@ import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
+
+import java.io.File;
 
 @Service
 @Slf4j
@@ -41,7 +46,7 @@ public class AiGeneratorFacade {
             }
             case VUE_PROJECT -> {
                 TokenStream stream = aiGeneratorService.generateVueProjectStream(appId, userMessage);
-                yield proocessTokenStream(stream);
+                yield proocessTokenStream(stream, appId);
             }
             default -> {
                 String errorMessage = "不支持的生成类型：" + codeGenTypeEnum.getValue();
@@ -66,7 +71,7 @@ public class AiGeneratorFacade {
         });
     }
 
-    private Flux<String> proocessTokenStream(TokenStream stream){
+    private Flux<String> proocessTokenStream(TokenStream stream, Long appId){
         return Flux.create(sink -> {
             stream.onPartialResponse((String partialResponse) -> {
                 AiResponseMessage aiResponseMessage = new AiResponseMessage(partialResponse);
@@ -81,6 +86,9 @@ public class AiGeneratorFacade {
                 sink.next(JSONUtil.toJsonStr(toolExecutedMessage));
             })
             .onCompleteResponse((ChatResponse response) -> {
+                // 构造 Vue 项目
+                String projectPath = AppConstant.CODE_OUTPUT_ROOT_DIR + File.separator + StrUtil.format("{}_{}", CodeGenTypeEnum.VUE_PROJECT.getValue(), appId);
+                VueProjectBuilder.buildProject(projectPath);
                 sink.complete();
             })
             .onError((Throwable error)->{

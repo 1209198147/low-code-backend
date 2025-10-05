@@ -35,9 +35,6 @@ public class JsonMessageStreamHandler {
                 .doOnComplete(() -> {
                     String aiResponse = chatHistoryStringBuilder.toString();
                     chatHistoryService.addMessage(loginUser.getId(), appId, MessageTypeEnum.AI, aiResponse);
-                    // 异步构造 Vue 项目
-                    String projectPath = AppConstant.CODE_OUTPUT_ROOT_DIR + File.separator + StrUtil.format("{}_{}", CodeGenTypeEnum.VUE_PROJECT.getValue(), appId);
-                    VueProjectBuilder.buildProjectAsync(projectPath);
                 })
                 .doOnError(error -> {
                     String errorMessage = "AI回复失败: " + error.getMessage();
