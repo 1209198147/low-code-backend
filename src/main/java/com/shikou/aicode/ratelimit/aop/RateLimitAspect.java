@@ -1,11 +1,13 @@
 package com.shikou.aicode.ratelimit.aop;
 
+import cn.hutool.core.util.StrUtil;
 import com.shikou.aicode.exception.BusinessException;
 import com.shikou.aicode.exception.ErrorCode;
 import com.shikou.aicode.model.entity.User;
 import com.shikou.aicode.ratelimit.annotation.RateLimit;
-import com.shikou.aicode.ratelimit.enums.RateLimitType;
+import com.shikou.aicode.ratelimit.annotation.UserRateLimit;
 import com.shikou.aicode.service.UserService;
+import com.shikou.aicode.service.VipService;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
@@ -18,6 +20,7 @@ import org.redisson.api.RRateLimiter;
 import org.redisson.api.RateIntervalUnit;
 import org.redisson.api.RateType;
 import org.redisson.api.RedissonClient;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestAttributes;
 import org.springframework.web.context.request.RequestContextHolder;
@@ -25,6 +28,7 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.lang.reflect.Method;
 import java.time.Duration;
+import java.time.LocalDate;
 
 @Aspect
 @Component
@@ -34,11 +38,13 @@ public class RateLimitAspect {
     private RedissonClient redissonClient;
     @Resource
     private UserService userService;
+    @Resource
+    private VipService vipService;
 
+    @Order(1)
     @Before("@annotation(rateLimit)")
     public void doLimit(JoinPoint joinPoint, RateLimit rateLimit){
         String key = generateRateLimitKey(joinPoint, rateLimit);
-        RateLimitType type = rateLimit.type();
         int rate = rateLimit.rate();
         int rateInterval = rateLimit.rateInterval();
         String message = rateLimit.message();
@@ -46,6 +52,36 @@ public class RateLimitAspect {
         RRateLimiter rateLimiter = redissonClient.getRateLimiter(key);
         rateLimiter.expire(Duration.ofHours(1));
         rateLimiter.trySetRate(RateType.OVERALL, rate, rateInterval, RateIntervalUnit.SECONDS);
+        if(!rateLimiter.tryAcquire(1)){
+            if(StringUtils.isEmpty(message)){
+                throw new BusinessException(ErrorCode.TOO_MANY_REQUEST);
+            }
+            throw new BusinessException(ErrorCode.TOO_MANY_REQUEST, message);
+        }
+    }
+
+    @Order(2)
+    @Before("@annotation(rateLimit)")
+    public void doUserLimit(JoinPoint joinPoint, UserRateLimit rateLimit){
+        RequestAttributes requestAttributes = RequestContextHolder.currentRequestAttributes();
+        HttpServletRequest request = ((ServletRequestAttributes) requestAttributes).getRequest();
+        User loginUser = userService.getLoginUser(request);
+        Long userId = loginUser.getId();
+        int dayOfYear = LocalDate.now().getDayOfYear();
+        String key = StrUtil.format("user_rate_limit:{}:{}:{}", rateLimit.key(), dayOfYear, userId);
+        int rate = rateLimit.rate();
+        int vipRate = rateLimit.vipRate();
+        int rateInterval = rateLimit.rateInterval();
+        String message = rateLimit.message();
+        RateIntervalUnit rateIntervalUnit = rateLimit.rateIntervalUnit();
+
+        RRateLimiter rateLimiter = redissonClient.getRateLimiter(key);
+        rateLimiter.expire(Duration.ofDays(1));
+        if(vipService.isVip(userId)){
+            rateLimiter.trySetRate(RateType.OVERALL, vipRate, rateInterval, rateIntervalUnit);
+        }else{
+            rateLimiter.trySetRate(RateType.OVERALL, rate, rateInterval, rateIntervalUnit);
+        }
         if(!rateLimiter.tryAcquire(1)){
             if(StringUtils.isEmpty(message)){
                 throw new BusinessException(ErrorCode.TOO_MANY_REQUEST);

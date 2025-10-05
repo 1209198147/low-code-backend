@@ -1,6 +1,7 @@
 package com.shikou.aicode.constant;
 
 import java.io.File;
+import java.time.Duration;
 
 public interface AppConstant {
 

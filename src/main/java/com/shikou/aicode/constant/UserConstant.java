@@ -30,4 +30,6 @@ public interface UserConstant {
     Integer CONTINUOUS_ATTENDANCE_COIN = 5;
     Integer VIP_REDEMPTION_COST = 100;
     Integer VIP_REDEMPTION_DAYS = 7;
+    int COMMON_USER_CHAT_TIME = 20;
+    int VIP_USER_CHAT_TIME = 50;
 }
