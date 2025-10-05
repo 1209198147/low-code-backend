@@ -23,12 +23,19 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(BusinessException.class)
     public BaseResponse<?> businessExceptionHandler(BusinessException e) {
         log.error("BusinessException", e);
+        // 尝试处理 SSE 请求
+        if (handleSseError(e.getCode(), e.getMessage())) {
+            return null;
+        }
         return ResultUtils.error(e.getCode(), e.getMessage());
     }
 
     @ExceptionHandler(RuntimeException.class)
     public BaseResponse<?> runtimeExceptionHandler(RuntimeException e) {
         log.error("RuntimeException", e);
+        if (handleSseError(ErrorCode.SYSTEM_ERROR.getCode(), "系统错误")) {
+            return null;
+        }
         return ResultUtils.error(ErrorCode.SYSTEM_ERROR, "系统错误");
     }
 
