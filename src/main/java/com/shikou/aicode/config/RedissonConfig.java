@@ -1,4 +1,4 @@
-package com.shikou.aicode.ratelimit.config;
+package com.shikou.aicode.config;
 
 import org.redisson.Redisson;
 import org.redisson.api.RedissonClient;
