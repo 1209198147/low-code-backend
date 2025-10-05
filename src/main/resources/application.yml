@@ -26,6 +26,7 @@ spring:
       password:
       port: 6379
       ttl: 3600
+      database: 0
 server:
   port: 8123
   servlet:

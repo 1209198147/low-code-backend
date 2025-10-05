@@ -19,6 +19,7 @@ import com.shikou.aicode.model.entity.App;
 import com.shikou.aicode.model.entity.User;
 import com.shikou.aicode.model.enums.UserRoleEnum;
 import com.shikou.aicode.model.vo.AppVO;
+import com.shikou.aicode.ratelimit.annotation.RateLimit;
 import com.shikou.aicode.service.AppService;
 import com.shikou.aicode.service.ProjectDownloadService;
 import com.shikou.aicode.service.UserService;
@@ -53,6 +54,7 @@ public class AppController {
     @Resource
     private ProjectDownloadService projectDownloadService;
 
+    @RateLimit(rate = 10, rateInterval = 60, message = "AI对话过于频繁，请稍后再试")
     @GetMapping(value = "/chat/gen/code", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<ServerSentEvent<String>> chatToGenCode(@RequestParam Long appId,
                                                        @RequestParam String message,
