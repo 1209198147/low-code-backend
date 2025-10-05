@@ -9,20 +9,20 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Scope;
 
 @Configuration
-@ConfigurationProperties("langchain4j.openai.resoning-stream-chat-model")
+@ConfigurationProperties("langchain4j.open-ai.streaming-chat-model")
 @Data
-public class ReasoningStreamChatModelConfig {
+public class StreamChatModelConfig {
     private String baseUrl;
     private String apiKey;
     private String modelName;
     private int maxTokens;
     private  boolean logRequests;
     private boolean logResponses;
-    private Double temperature = 0.1;
+    private Double temperature;
 
     @Bean
     @Scope("prototype")
-    public StreamingChatModel reasoningStreamingChatModelPrototype(){
+    public StreamingChatModel streamingChatModelPrototype(){
         return OpenAiStreamingChatModel.builder()
                 .baseUrl(baseUrl)
                 .apiKey(apiKey)

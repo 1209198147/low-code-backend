@@ -8,6 +8,7 @@ import cn.hutool.core.util.StrUtil;
 import com.mybatisflex.core.query.QueryWrapper;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
 import com.shikou.aicode.ai.AiCodeGenTypeRoutingService;
+import com.shikou.aicode.ai.AiCodeGenTypeRoutingServiceFactory;
 import com.shikou.aicode.constant.AppConstant;
 import com.shikou.aicode.core.AiGeneratorFacade;
 import com.shikou.aicode.core.builder.VueProjectBuilder;
@@ -61,8 +62,6 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App>  implements AppS
     @Resource
     private ScreenShotService screenShotService;
     @Resource
-    private AiCodeGenTypeRoutingService aiCodeGenTypeRoutingService;
-    @Resource
     private ScreenShotMessageProducer screenShotMessageProducer;
 
     @Override
@@ -76,6 +75,7 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App>  implements AppS
         app.setUserId(loginUser.getId());
         // 应用名称暂时为 initPrompt 前 12 位
         app.setAppName(initPrompt.substring(0, Math.min(initPrompt.length(), 12)));
+        AiCodeGenTypeRoutingService aiCodeGenTypeRoutingService = AiCodeGenTypeRoutingServiceFactory.createAiCodeGenTypeRoutingService();
         CodeGenTypeEnum typeEnum = aiCodeGenTypeRoutingService.routeCodeGenType(initPrompt);
         app.setCodeGenType(typeEnum.getValue());
         boolean result = save(app);

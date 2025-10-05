@@ -8,6 +8,7 @@ import com.shikou.aicode.exception.BusinessException;
 import com.shikou.aicode.exception.ErrorCode;
 import com.shikou.aicode.model.enums.CodeGenTypeEnum;
 import com.shikou.aicode.service.ChatHistoryService;
+import com.shikou.aicode.utils.SpringContextUtil;
 import dev.langchain4j.community.store.memory.chat.redis.RedisChatMemoryStore;
 import dev.langchain4j.data.message.ToolExecutionResultMessage;
 import dev.langchain4j.memory.chat.MessageWindowChatMemory;
@@ -23,21 +24,12 @@ import java.time.Duration;
 @Configuration
 @Slf4j
 public class AiGeneratorServiceFactory {
-    @Resource
+    @Resource(name = "openAiChatModel")
     private ChatModel chatModel;
-
-    @Resource
-    private StreamingChatModel openAiStreamingChatModel;
-
-    @Resource
-    private StreamingChatModel reasoningStreamingChatModel;
-
     @Resource
     private RedisChatMemoryStore redisChatMemoryStore;
-
     @Resource
     private ChatHistoryService chatHistoryService;
-
     @Resource
     private ToolManager toolManager;
 
@@ -63,20 +55,28 @@ public class AiGeneratorServiceFactory {
         chatHistoryService.loadChatHistoryToMemory(appId, chatMemory, 20);
 
         return switch (typeEnum){
-            case HTML, MULTI_FILE -> AiServices.builder(AiGeneratorService.class)
-                    .chatModel(chatModel)
-                    .streamingChatModel(openAiStreamingChatModel)
-                    .chatMemory(chatMemory)
-                    .build();
-            case VUE_PROJECT -> AiServices.builder(AiGeneratorService.class)
-                    .chatModel(chatModel)
-                    .streamingChatModel(reasoningStreamingChatModel)
-                    .chatMemoryProvider(memoryId -> chatMemory)
-                    .tools(toolManager.getTools())
-                    .hallucinatedToolNameStrategy(toolExecutionRequest -> ToolExecutionResultMessage.from(
-                            toolExecutionRequest, "Erorr: there is no tool called " + toolExecutionRequest.name()
-                    ))
-                    .build();
+            case HTML, MULTI_FILE -> {
+                // 使用多例解决并发问题
+                StreamingChatModel streamingChatModel = SpringContextUtil.getBean("streamingChatModelPrototype", StreamingChatModel.class);
+                yield AiServices.builder(AiGeneratorService.class)
+                        .chatModel(chatModel)
+                        .streamingChatModel(streamingChatModel)
+                        .chatMemory(chatMemory)
+                        .build();
+            }
+            case VUE_PROJECT -> {
+                // 使用多例解决并发问题
+                StreamingChatModel reasoningStreamingChatModel = SpringContextUtil.getBean("reasoningStreamingChatModelPrototype", StreamingChatModel.class);
+                yield  AiServices.builder(AiGeneratorService.class)
+                        .chatModel(chatModel)
+                        .streamingChatModel(reasoningStreamingChatModel)
+                        .chatMemoryProvider(memoryId -> chatMemory)
+                        .tools(toolManager.getTools())
+                        .hallucinatedToolNameStrategy(toolExecutionRequest -> ToolExecutionResultMessage.from(
+                                toolExecutionRequest, "Erorr: there is no tool called " + toolExecutionRequest.name()
+                        ))
+                        .build();
+            }
             default -> throw new BusinessException(ErrorCode.PARAMS_ERROR, "不支持的代码生成类型");
         };
     }
