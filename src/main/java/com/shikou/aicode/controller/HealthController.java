@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/health")
 public class HealthController {
 
-    @RateLimit(rate = 5, rateInterval = 60, type = RateLimitType.IP)
+    @RateLimit(rate = 5, rateInterval = 10, type = RateLimitType.IP)
     @GetMapping("/")
     public BaseResponse<String> healthCheck() {
         return ResultUtils.success("ok");

@@ -25,4 +25,9 @@ public interface UserConstant {
     // endregion
 
     String ATTENDANCE_KEY = "user:attendance:";
+
+    Integer ATTENDANCE_COIN = 1;
+    Integer CONTINUOUS_ATTENDANCE_COIN = 5;
+    Integer VIP_REDEMPTION_COST = 100;
+    Integer VIP_REDEMPTION_DAYS = 7;
 }

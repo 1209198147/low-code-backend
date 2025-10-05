@@ -5,6 +5,9 @@ import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
 import com.mybatisflex.core.query.QueryWrapper;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
+import com.shikou.aicode.constant.UserConstant;
+import com.shikou.aicode.exception.ThrowUtils;
+import com.shikou.aicode.model.entity.Vip;
 import com.shikou.aicode.model.vo.LoginUserVO;
 import com.shikou.aicode.model.vo.UserVO;
 import com.shikou.aicode.exception.BusinessException;
@@ -14,12 +17,20 @@ import com.shikou.aicode.model.entity.User;
 import com.shikou.aicode.mapper.UserMapper;
 import com.shikou.aicode.model.enums.UserRoleEnum;
 import com.shikou.aicode.service.UserService;
+import com.shikou.aicode.service.VipService;
+import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
+import org.redisson.api.RBitSet;
+import org.redisson.api.RedissonClient;
 import org.springframework.stereotype.Service;
 import org.springframework.util.DigestUtils;
 
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.BitSet;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -31,6 +42,10 @@ import static com.shikou.aicode.constant.UserConstant.USER_LOGIN_STATE;
  */
 @Service
 public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements UserService {
+    @Resource
+    private RedissonClient redissonClient;
+    @Resource
+    private VipService vipService;
 
     @Override
     public long userRegister(String userAccount, String userPassword, String checkPassword) {
@@ -76,6 +91,14 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         }
         LoginUserVO loginUserVO = new LoginUserVO();
         BeanUtil.copyProperties(user, loginUserVO);
+        Vip vip = vipService.getVip(user.getId());
+        if(vip!=null){
+            LocalDateTime expiredTime = vip.getExpiredTime();
+            loginUserVO.setIsVip(LocalDateTime.now().isBefore(expiredTime));
+            loginUserVO.setVipExpiredTime(expiredTime);
+        }else{
+            loginUserVO.setIsVip(false);
+        }
         return loginUserVO;
     }
 
@@ -105,6 +128,58 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         request.getSession().setAttribute(USER_LOGIN_STATE, user);
         // 5. 返回脱敏的用户信息
         return this.getLoginUserVO(user);
+    }
+
+    @Override
+    public boolean attendance(HttpServletRequest request) {
+        ThrowUtils.throwIf(request == null, ErrorCode.PARAMS_ERROR);
+        User loginUser = getLoginUser(request);
+        LocalDate today = LocalDate.now();
+        int index = today.getDayOfYear();
+
+        String key = UserConstant.ATTENDANCE_KEY + today.getYear() + ":" + loginUser.getId();
+        RBitSet bitSet = redissonClient.getBitSet(key);
+        BitSet bs = bitSet.asBitSet();
+        if(bs.get(index)){
+            return true;
+        }
+        bitSet.set(index);
+        int continuousDays = 0;
+        for (int i = index; i >= 0; i--) {
+            if (bs.get(i)) {
+                continuousDays++;
+            } else {
+                break;
+            }
+        }
+        int addCoinNum = UserConstant.ATTENDANCE_COIN;
+        if(continuousDays >= 7){
+            addCoinNum = UserConstant.CONTINUOUS_ATTENDANCE_COIN;
+        }
+        increaseCoin(loginUser.getId(), addCoinNum);
+        bitSet.expire(Duration.ofDays(today.lengthOfYear()-index+1));
+        return true;
+    }
+
+    @Override
+    public boolean increaseCoin(Long id, int num){
+        QueryWrapper queryWrapper = QueryWrapper.create().select(User::getCoin).eq(User::getId, id);
+        User updateUser = getOne(queryWrapper);
+        updateUser.setId(id);
+        updateUser.setCoin(updateUser.getCoin() + num);
+        return updateById(updateUser);
+    }
+
+    @Override
+    public boolean reduceCoin(Long id, int num){
+        QueryWrapper queryWrapper = QueryWrapper.create().select(User::getCoin).eq(User::getId, id);
+        User updateUser = getOne(queryWrapper);
+        if(updateUser.getCoin() < num){
+            return false;
+        }
+        updateUser.setId(id);
+        updateUser.setCoin(updateUser.getCoin() - num);
+        return updateById(updateUser);
     }
 
     @Override

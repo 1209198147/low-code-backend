@@ -37,6 +37,11 @@ public class UserVO implements Serializable {
     private String userProfile;
 
     /**
+     * 硬币
+     */
+    private Integer coin;
+
+    /**
      * 用户角色：user/admin
      */
     private String userRole;

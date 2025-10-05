@@ -95,19 +95,8 @@ public class UserController {
     @PostMapping("/attendance")
     public BaseResponse<Boolean> userAttendance(HttpServletRequest request) {
         ThrowUtils.throwIf(request == null, ErrorCode.PARAMS_ERROR);
-        User loginUser = userService.getLoginUser(request);
-        LocalDate today = LocalDate.now();
-        int index = today.getDayOfYear();
-
-        String key = UserConstant.ATTENDANCE_KEY + today.getYear() + ":" + loginUser.getId();
-        RBitSet bitSet = redissonClient.getBitSet(key);
-        BitSet bs = bitSet.asBitSet();
-        if(bs.get(index)){
-            return ResultUtils.success(true, "重复签到");
-        }
-        bitSet.set(index);
-        bitSet.expire(Duration.ofDays(today.lengthOfYear()-index+1));
-        return ResultUtils.success(true);
+        boolean attendanced = userService.attendance(request);
+        return ResultUtils.success(attendanced);
     }
 
     @GetMapping("/list/attendance")

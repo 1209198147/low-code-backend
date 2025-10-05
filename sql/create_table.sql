@@ -18,6 +18,7 @@ create table if not exists user
     userName     varchar(256)                           null comment '用户昵称',
     userAvatar   varchar(1024)                          null comment '用户头像',
     userProfile  varchar(512)                           null comment '用户简介',
+    coin         int          default 0                 not null comment '硬币',
     userRole     varchar(256) default 'user'            not null comment '用户角色：user/admin',
     editTime     datetime     default CURRENT_TIMESTAMP not null comment '编辑时间',
     createTime   datetime     default CURRENT_TIMESTAMP not null comment '创建时间',
@@ -63,3 +64,16 @@ create table chat_history
     INDEX idx_createTime (createTime),             -- 提升基于时间的查询性能
     INDEX idx_appId_createTime (appId, createTime) -- 游标查询核心索引
 ) comment '对话历史' collate = utf8mb4_unicode_ci;
+
+-- vip表
+create table vip
+(
+    id          bigint auto_increment comment 'id' primary key,
+    userId      bigint                             not null comment '用户id',
+    createTime  datetime default CURRENT_TIMESTAMP not null comment '开通时间',
+    expiredTime datetime                           not null comment '过期时间',
+    updateTime  datetime default CURRENT_TIMESTAMP not null on update CURRENT_TIMESTAMP comment '更新时间',
+    isDelete    tinyint  default 0                 not null comment '是否删除',
+    INDEX idx_userId (userId),
+    INDEX idx_createTime (createTime)
+) comment 'VIP' collate = utf8mb4_unicode_ci;

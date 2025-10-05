@@ -44,6 +44,18 @@ public interface UserService extends IService<User> {
     LoginUserVO userLogin(String userAccount, String userPassword, HttpServletRequest request);
 
     /**
+     * 用户签到
+     *
+     * @param request
+     * @return 脱敏后的用户信息
+     */
+    boolean attendance(HttpServletRequest request);
+
+    boolean increaseCoin(Long id, int num);
+
+    boolean reduceCoin(Long id, int num);
+
+    /**
      * 获取当前登录用户
      *
      * @param request

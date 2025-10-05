@@ -37,6 +37,19 @@ public class LoginUserVO implements Serializable {
     private String userProfile;
 
     /**
+     * 硬币
+     */
+    private Integer coin;
+    /**
+     * 硬币
+     */
+    private Boolean isVip;
+    /**
+     * 硬币
+     */
+    private LocalDateTime vipExpiredTime;
+
+    /**
      * 用户角色：user/admin
      */
     private String userRole;
