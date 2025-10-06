@@ -3,6 +3,7 @@ package com.shikou.aicode.ai;
 import cn.hutool.core.util.StrUtil;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import com.shikou.aicode.ai.guradrail.PromptSafetyInputGuardrail;
 import com.shikou.aicode.ai.tool.ToolManager;
 import com.shikou.aicode.exception.BusinessException;
 import com.shikou.aicode.exception.ErrorCode;
@@ -62,6 +63,8 @@ public class AiGeneratorServiceFactory {
                         .chatModel(chatModel)
                         .streamingChatModel(streamingChatModel)
                         .chatMemory(chatMemory)
+                        .inputGuardrails(new PromptSafetyInputGuardrail())
+                        .maxSequentialToolsInvocations(20)
                         .build();
             }
             case VUE_PROJECT -> {
@@ -75,6 +78,8 @@ public class AiGeneratorServiceFactory {
                         .hallucinatedToolNameStrategy(toolExecutionRequest -> ToolExecutionResultMessage.from(
                                 toolExecutionRequest, "Erorr: there is no tool called " + toolExecutionRequest.name()
                         ))
+                        .inputGuardrails(new PromptSafetyInputGuardrail())
+                        .maxSequentialToolsInvocations(20)
                         .build();
             }
             default -> throw new BusinessException(ErrorCode.PARAMS_ERROR, "不支持的代码生成类型");
