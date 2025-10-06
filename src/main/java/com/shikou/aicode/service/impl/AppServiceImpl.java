@@ -34,6 +34,7 @@ import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 
@@ -63,6 +64,9 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App>  implements AppS
     private ScreenShotService screenShotService;
     @Resource
     private ScreenShotMessageProducer screenShotMessageProducer;
+
+    @Value("${code.deploy-host:http://localhost}")
+    private String deployHost;
 
     @Override
     public Long createApp(AppAddRequest appAddRequest, HttpServletRequest request){
@@ -213,7 +217,7 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App>  implements AppS
         updateApp.setDeployedTime(LocalDateTime.now());
         boolean result = updateById(updateApp);
         ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR, "更新应用部署信息失败");
-        String deployUrl = String.format("%s/%s", AppConstant.CODE_DEPLOY_HOST, deployKey);
+        String deployUrl = String.format("%s/%s", deployHost, deployKey);
         screenShotMessageProducer.sendScreenShotMessage(deployUrl, appId);
         return deployUrl;
     }
