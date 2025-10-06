@@ -27,6 +27,9 @@ spring:
       port: 6379
       ttl: 3600
       database: 0
+  servlet:
+    multipart:
+      max-file-size: 5MB
 server:
   port: 8123
   servlet:

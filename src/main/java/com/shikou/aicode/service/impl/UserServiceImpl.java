@@ -2,11 +2,14 @@ package com.shikou.aicode.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.io.FileUtil;
+import cn.hutool.core.util.RandomUtil;
 import cn.hutool.core.util.StrUtil;
 import com.mybatisflex.core.query.QueryWrapper;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
 import com.shikou.aicode.constant.UserConstant;
 import com.shikou.aicode.exception.ThrowUtils;
+import com.shikou.aicode.manager.CosManager;
 import com.shikou.aicode.model.entity.InvitationCode;
 import com.shikou.aicode.model.entity.Vip;
 import com.shikou.aicode.model.vo.LoginUserVO;
@@ -22,11 +25,13 @@ import com.shikou.aicode.service.UserService;
 import com.shikou.aicode.service.VipService;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
+import org.apache.commons.lang3.StringUtils;
 import org.redisson.api.RBitSet;
 import org.redisson.api.RedissonClient;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.DigestUtils;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
@@ -51,6 +56,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     private VipService vipService;
     @Resource
     private InvitationCodeService invitationCodeService;
+    @Resource
+    private CosManager cosManager;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -85,7 +92,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         User user = new User();
         user.setUserAccount(userAccount);
         user.setUserPassword(encryptPassword);
-        user.setUserName("无名");
+        user.setUserName("集扣用户_"+ RandomUtil.randomString(4));
         user.setUserRole(UserRoleEnum.USER.getValue());
         boolean saveResult = this.save(user);
         if (!saveResult) {
@@ -269,5 +276,42 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         // 盐值，混淆密码
         final String SALT = "shikou";
         return DigestUtils.md5DigestAsHex((userPassword + SALT).getBytes(StandardCharsets.UTF_8));
+    }
+
+    @Override
+    public String updateUserAvatar(MultipartFile file, HttpServletRequest request) {
+        validateImageFile(file);
+        User loginUser = getLoginUser(request);
+        Long userId = loginUser.getId();
+
+        String fileKey = generateAvatarKey(userId, file.getOriginalFilename());
+        String avatarUrl = cosManager.uploadFile(fileKey, file);
+        ThrowUtils.throwIf(StringUtils.isEmpty(avatarUrl), ErrorCode.OPERATION_ERROR, "头像上传失败");
+        User updateUser = new User();
+        updateUser.setId(userId);
+        updateUser.setUserAvatar(avatarUrl);
+        boolean result = updateById(updateUser);
+        ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR, "头像修改失败");
+        return avatarUrl;
+    }
+
+    private void validateImageFile(MultipartFile file) {
+        if (file.isEmpty()) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "文件不能为空");
+        }
+        // 验证文件类型
+        String contentType = file.getContentType();
+        if (contentType == null || !contentType.startsWith("image/")) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "只能上传图片文件");
+        }
+        // 验证文件大小 (限制为2MB)
+        if (file.getSize() > 2 * 1024 * 1024) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "文件大小不能超过2MB");
+        }
+    }
+
+    private String generateAvatarKey(Long userId, String originalFilename) {
+        String fileExtension = FileUtil.getSuffix(originalFilename);
+        return String.format("avatars/%s.%s", userId, fileExtension);
     }
 }

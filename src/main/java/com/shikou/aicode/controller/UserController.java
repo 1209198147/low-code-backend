@@ -19,16 +19,16 @@ import com.shikou.aicode.service.InvitationCodeService;
 import com.shikou.aicode.service.UserService;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
+import org.apache.commons.lang3.StringUtils;
 import org.redisson.api.RBitSet;
 import org.redisson.api.RedissonClient;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
-import java.time.Duration;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.List;
-import java.util.Map;
 
 /**
  * 用户 控制层。
@@ -95,6 +95,62 @@ public class UserController {
         ThrowUtils.throwIf(request == null, ErrorCode.PARAMS_ERROR);
         boolean result = userService.userLogout(request);
         return ResultUtils.success(result);
+    }
+
+    @PostMapping("/changePassword")
+    public BaseResponse<Boolean> changePassword(@RequestBody UserChangePasswordRequest changePasswordRequest, HttpServletRequest request) {
+        ThrowUtils.throwIf(request == null, ErrorCode.PARAMS_ERROR);
+        String newPassword = changePasswordRequest.getNewPassword();
+        String oldPassword = changePasswordRequest.getOldPassword();
+        ThrowUtils.throwIf(StringUtils.isAnyBlank(oldPassword, newPassword), ErrorCode.PARAMS_ERROR, "旧密码和新密码不能为空");
+        ThrowUtils.throwIf(oldPassword.equals(newPassword), ErrorCode.PARAMS_ERROR, "旧密码和新密码不能相同");
+        if (newPassword.length() < 8 || newPassword.length() < 8) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "新的密码长度过短");
+        }
+
+        User loginUser = userService.getLoginUser(request);
+        String password = loginUser.getUserPassword();
+        oldPassword = userService.getEncryptPassword(oldPassword);
+        ThrowUtils.throwIf(!password.equals(oldPassword), ErrorCode.PARAMS_ERROR, "旧的密码不正确");
+        User updateUser = new User();
+        updateUser.setId(loginUser.getId());
+        updateUser.setUserPassword(userService.getEncryptPassword(newPassword));
+        boolean result = userService.updateById(updateUser);
+        return ResultUtils.success(result);
+    }
+
+    @PostMapping("/modify")
+    public BaseResponse<LoginUserVO> userModify(@RequestBody UserModifyRequest modifyRequest, HttpServletRequest request) {
+        ThrowUtils.throwIf(modifyRequest==null || request == null, ErrorCode.PARAMS_ERROR);
+        User loginUser = userService.getLoginUser(request);
+        String userName = modifyRequest.getUserName();
+        String userProfile = modifyRequest.getUserProfile();
+        if(StringUtils.isAllBlank(userName, userProfile)){
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "修改数据为空");
+        }
+        User updateUser = new User();
+        updateUser.setId(loginUser.getId());
+        if(StringUtils.isNotBlank(userName)){
+            ThrowUtils.throwIf(userName.length()>10, ErrorCode.PARAMS_ERROR, "用户名不能超过10个字符");
+            updateUser.setUserName(userName);
+        }
+        if(StringUtils.isNotBlank(userProfile)){
+            ThrowUtils.throwIf(userProfile.length()>512, ErrorCode.PARAMS_ERROR, "个人简介不能超过512个字符");
+            updateUser.setUserProfile(userProfile);
+        }
+        boolean result = userService.updateById(updateUser);
+        ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR, "修改个人信息失败");
+        loginUser = userService.getLoginUser(request);
+        LoginUserVO loginUserVO = userService.getLoginUserVO(loginUser);
+        return ResultUtils.success(loginUserVO);
+    }
+
+    @PostMapping("/avatar/upload")
+    public BaseResponse<String> uploadAvatar(@RequestParam("file") MultipartFile file,
+                                             HttpServletRequest request) {
+        ThrowUtils.throwIf(file==null || request == null, ErrorCode.PARAMS_ERROR);
+        String avatarUrl = userService.updateUserAvatar(file, request);
+        return ResultUtils.success(avatarUrl);
     }
 
     @GetMapping("/get/invitationCode")

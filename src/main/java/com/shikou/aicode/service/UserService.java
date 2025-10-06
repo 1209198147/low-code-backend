@@ -7,6 +7,7 @@ import com.shikou.aicode.model.vo.UserVO;
 import com.shikou.aicode.model.dto.user.UserQueryRequest;
 import com.shikou.aicode.model.entity.User;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -102,4 +103,6 @@ public interface UserService extends IService<User> {
      * @return 加密后的用户密码
      */
     String getEncryptPassword(String userPassword);
+
+    String updateUserAvatar(MultipartFile file, HttpServletRequest request);
 }
