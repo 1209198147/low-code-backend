@@ -1,6 +1,6 @@
 package com.shikou.aicode.mq.producer;
 
-import com.shikou.aicode.model.dto.mq.ScreenShotMessage;
+import com.shikou.aicode.mq.model.ScreenShotMessage;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.connection.CorrelationData;

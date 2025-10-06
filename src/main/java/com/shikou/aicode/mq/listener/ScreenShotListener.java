@@ -2,7 +2,7 @@ package com.shikou.aicode.mq.listener;
 
 import cn.hutool.json.JSONUtil;
 import com.rabbitmq.client.Channel;
-import com.shikou.aicode.model.dto.mq.ScreenShotMessage;
+import com.shikou.aicode.mq.model.ScreenShotMessage;
 import com.shikou.aicode.service.AppService;
 import com.shikou.aicode.service.ScreenShotService;
 import jakarta.annotation.Resource;

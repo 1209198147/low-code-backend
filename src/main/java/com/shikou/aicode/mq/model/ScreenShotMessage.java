@@ -1,4 +1,4 @@
-package com.shikou.aicode.model.dto.mq;
+package com.shikou.aicode.mq.model;
 
 import lombok.Data;
 
