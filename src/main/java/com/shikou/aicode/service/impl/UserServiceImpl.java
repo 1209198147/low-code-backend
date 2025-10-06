@@ -7,6 +7,7 @@ import com.mybatisflex.core.query.QueryWrapper;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
 import com.shikou.aicode.constant.UserConstant;
 import com.shikou.aicode.exception.ThrowUtils;
+import com.shikou.aicode.model.entity.InvitationCode;
 import com.shikou.aicode.model.entity.Vip;
 import com.shikou.aicode.model.vo.LoginUserVO;
 import com.shikou.aicode.model.vo.UserVO;
@@ -16,6 +17,7 @@ import com.shikou.aicode.model.dto.user.UserQueryRequest;
 import com.shikou.aicode.model.entity.User;
 import com.shikou.aicode.mapper.UserMapper;
 import com.shikou.aicode.model.enums.UserRoleEnum;
+import com.shikou.aicode.service.InvitationCodeService;
 import com.shikou.aicode.service.UserService;
 import com.shikou.aicode.service.VipService;
 import jakarta.annotation.Resource;
@@ -23,6 +25,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.redisson.api.RBitSet;
 import org.redisson.api.RedissonClient;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.DigestUtils;
 
 import java.nio.charset.StandardCharsets;
@@ -46,11 +49,14 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     private RedissonClient redissonClient;
     @Resource
     private VipService vipService;
+    @Resource
+    private InvitationCodeService invitationCodeService;
 
     @Override
-    public long userRegister(String userAccount, String userPassword, String checkPassword) {
+    @Transactional(rollbackFor = Exception.class)
+    public long userRegister(String userAccount, String userPassword, String checkPassword, String code) {
         // 1. 校验参数
-        if (StrUtil.hasBlank(userAccount, userPassword, checkPassword)) {
+        if (StrUtil.hasBlank(userAccount, userPassword, checkPassword, code)) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "参数为空");
         }
         if (userAccount.length() < 4) {
@@ -62,16 +68,20 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         if (!userPassword.equals(checkPassword)) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "两次输入的密码不一致");
         }
-        // 2. 查询用户是否已存在
+        // 2. 判断邀请码是否正确或被使用
+        boolean vailed = invitationCodeService.verifyCode(code);
+        ThrowUtils.throwIf(!vailed, ErrorCode.NOT_FOUND_ERROR, "邀请码错误或已被使用");
+
+        // 3. 查询用户是否已存在
         QueryWrapper queryWrapper = new QueryWrapper();
         queryWrapper.eq("userAccount", userAccount);
         long count = this.mapper.selectCountByQuery(queryWrapper);
         if (count > 0) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "账号重复");
         }
-        // 3. 加密密码
+        // 4. 加密密码
         String encryptPassword = getEncryptPassword(userPassword);
-        // 4. 创建用户，插入数据库
+        // 5. 创建用户，插入数据库
         User user = new User();
         user.setUserAccount(userAccount);
         user.setUserPassword(encryptPassword);
@@ -81,6 +91,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         if (!saveResult) {
             throw new BusinessException(ErrorCode.OPERATION_ERROR, "注册失败，数据库错误");
         }
+        // 6. 使用邀请码
+        invitationCodeService.useCode(user.getId(), code);
         return user.getId();
     }
 

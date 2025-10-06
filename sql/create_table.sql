@@ -74,6 +74,19 @@ create table vip
     expiredTime datetime                           not null comment '过期时间',
     updateTime  datetime default CURRENT_TIMESTAMP not null on update CURRENT_TIMESTAMP comment '更新时间',
     isDelete    tinyint  default 0                 not null comment '是否删除',
-    INDEX idx_userId (userId),
-    INDEX idx_createTime (createTime)
+    INDEX idx_userId (userId)
 ) comment 'VIP' collate = utf8mb4_unicode_ci;
+
+-- 邀请码表
+create table invitation_code
+(
+    id         bigint auto_increment comment 'id' primary key,
+    userId     bigint                             not null comment '用户id',
+    code       varchar(8)                         not null comment '邀请码',
+    inviteeId  bigint   default null comment '被邀请用户ID',
+    createTime datetime default CURRENT_TIMESTAMP not null comment '创建时间',
+    isDelete   tinyint  default 0                 not null comment '是否删除',
+    INDEX idx_userId (userId),
+    INDEX idx_inviteeId (inviteeId),
+    UNIQUE INDEX idx_code (code)
+) comment '邀请码' collate = utf8mb4_unicode_ci;

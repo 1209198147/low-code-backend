@@ -31,7 +31,7 @@ public class VipServiceImpl extends ServiceImpl<VipMapper, Vip> implements VipSe
     private UserService userService;
 
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public boolean redeem(HttpServletRequest request) {
         User loginUser = userService.getLoginUser(request);
         Long userId = loginUser.getId();

@@ -12,8 +12,10 @@ import com.shikou.aicode.exception.ErrorCode;
 import com.shikou.aicode.exception.ThrowUtils;
 import com.shikou.aicode.model.dto.user.*;
 import com.shikou.aicode.model.entity.User;
+import com.shikou.aicode.model.vo.InvitationCodeVO;
 import com.shikou.aicode.model.vo.LoginUserVO;
 import com.shikou.aicode.model.vo.UserVO;
+import com.shikou.aicode.service.InvitationCodeService;
 import com.shikou.aicode.service.UserService;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
@@ -40,6 +42,8 @@ public class UserController {
     private UserService userService;
     @Resource
     private RedissonClient redissonClient;
+    @Resource
+    private InvitationCodeService invitationCodeService;
 
     /**
      * 用户注册
@@ -53,7 +57,8 @@ public class UserController {
         String userAccount = userRegisterRequest.getUserAccount();
         String userPassword = userRegisterRequest.getUserPassword();
         String checkPassword = userRegisterRequest.getCheckPassword();
-        long result = userService.userRegister(userAccount, userPassword, checkPassword);
+        String code = userRegisterRequest.getCode();
+        long result = userService.userRegister(userAccount, userPassword, checkPassword, code);
         return ResultUtils.success(result);
     }
 
@@ -90,6 +95,20 @@ public class UserController {
         ThrowUtils.throwIf(request == null, ErrorCode.PARAMS_ERROR);
         boolean result = userService.userLogout(request);
         return ResultUtils.success(result);
+    }
+
+    @GetMapping("/get/invitationCode")
+    public BaseResponse<String> getInvitationCode(HttpServletRequest request) {
+        ThrowUtils.throwIf(request == null, ErrorCode.PARAMS_ERROR);
+        String code = invitationCodeService.generateInvitationCode(request);
+        return ResultUtils.success(code);
+    }
+
+    @GetMapping("/list/invitationCode")
+    public BaseResponse<List<InvitationCodeVO>> listInvitationCode(HttpServletRequest request) {
+        ThrowUtils.throwIf(request == null, ErrorCode.PARAMS_ERROR);
+        List<InvitationCodeVO> invitationCodeVOList = invitationCodeService.listInvitationCodeVO(request);
+        return ResultUtils.success(invitationCodeVOList);
     }
 
     @PostMapping("/attendance")
