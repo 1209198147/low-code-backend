@@ -28,6 +28,19 @@ create table if not exists user
     INDEX idx_userName (userName)
 ) comment '用户' collate = utf8mb4_unicode_ci;
 
+-- 默认管理员账号
+INSERT INTO user (
+    id,
+    userAccount,
+    userPassword,
+    userName,
+    userAvatar,
+    userProfile,
+    coin,
+    userRole
+)
+VALUES (330953595526582272, 'shikou', '7a69ebe530192e74de21764ddd142a5a', 'Shikou', null, null, 0, 'admin');
+
 -- 应用表
 create table app
 (

@@ -2,6 +2,7 @@ package com.shikou.aicode.config;
 
 import dev.langchain4j.community.store.memory.chat.redis.RedisChatMemoryStore;
 import lombok.Data;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -20,11 +21,14 @@ public class RedisChatMemoryStoreConfig {
 
     @Bean
     public RedisChatMemoryStore redisChatMemoryStore() {
-        return RedisChatMemoryStore.builder()
-                .host(host)
+        RedisChatMemoryStore.Builder builder = RedisChatMemoryStore.builder();
+        builder.host(host)
                 .port(port)
                 .password(password)
-                .ttl(ttl)
-                .build();
+                .ttl(ttl);
+        if(StringUtils.isNotBlank(password)){
+            builder.user("default");
+        }
+        return builder.build();
     }
 }
