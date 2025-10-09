@@ -36,6 +36,23 @@ public class ScreenShotServiceImpl implements ScreenShotService {
         }
     }
 
+    @Override
+    public String generateAndUploadScreenshot(Long appId, String url){
+        ThrowUtils.throwIf(appId == null, ErrorCode.PARAMS_ERROR, "应用ID不能为空");
+        ThrowUtils.throwIf(StringUtils.isEmpty(url), ErrorCode.PARAMS_ERROR, "url不能为空");
+        log.info("开始生成截图...");
+        String path = WebScreenshotUtils.saveWebScreenShot(url);
+        ThrowUtils.throwIf(StringUtils.isEmpty(path), ErrorCode.SYSTEM_ERROR, "生成截图失败");
+        try{
+            String cosUrl = uploadCos(appId, path);
+            ThrowUtils.throwIf(StringUtils.isEmpty(cosUrl), ErrorCode.PARAMS_ERROR, "上传截图失败");
+            log.info("截图上传成功");
+            return cosUrl;
+        }finally {
+            cleanFile(path);
+        }
+    }
+
     private String uploadCos(String path){
         ThrowUtils.throwIf(StringUtils.isEmpty(path), ErrorCode.PARAMS_ERROR, "路径不能为空");
         File file = new File(path);
@@ -44,6 +61,17 @@ public class ScreenShotServiceImpl implements ScreenShotService {
             return null;
         }
         String fileName = UUID.randomUUID().toString().substring(0, 8) + "_compressed.png";
+        return cosManager.uploadFile(fileName, file);
+    }
+
+    private String uploadCos(Long appId, String path){
+        ThrowUtils.throwIf(StringUtils.isEmpty(path), ErrorCode.PARAMS_ERROR, "路径不能为空");
+        File file = new File(path);
+        if(!file.exists()){
+            log.error("文件不存在 {}", path);
+            return null;
+        }
+        String fileName = "cover_" + appId + ".png";
         return cosManager.uploadFile(fileName, file);
     }
 

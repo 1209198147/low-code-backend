@@ -32,7 +32,7 @@ public class ScreenShotListener {
             ScreenShotMessage screenShotMessage = JSONUtil.toBean(messageBody, ScreenShotMessage.class);
             Long appId = screenShotMessage.getAppId();
             String url = screenShotMessage.getUrl();
-            String cosUrl = screenShotService.generateAndUploadScreenshot(url);
+            String cosUrl = screenShotService.generateAndUploadScreenshot(appId, url);
             appService.updateCover(appId, cosUrl);
             channel.basicAck(deliveryTag, false);
         }catch (Exception e){
