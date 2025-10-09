@@ -1,4 +1,4 @@
-package com.shikou.aicode.config;
+package com.shikou.aicode.config.task;
 
 import cn.hutool.core.io.FileUtil;
 import com.shikou.aicode.constant.AppConstant;
