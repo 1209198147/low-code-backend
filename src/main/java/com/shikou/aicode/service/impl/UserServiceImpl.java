@@ -2,6 +2,7 @@ package com.shikou.aicode.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.collection.CollectionUtil;
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.util.RandomUtil;
 import cn.hutool.core.util.StrUtil;
@@ -39,6 +40,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.BitSet;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -293,6 +295,24 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         boolean result = updateById(updateUser);
         ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR, "头像修改失败");
         return avatarUrl;
+    }
+
+    @Override
+    public LoginUserVO guestLogin(HttpServletRequest request) {
+        // 1. 查询游客用户是否存在
+        QueryWrapper queryWrapper = new QueryWrapper();
+        queryWrapper.eq(User::getUserRole, UserRoleEnum.GUEST.getValue());
+        List<User> guestUsers = list(queryWrapper);
+
+        if (CollectionUtil.isEmpty(guestUsers)) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "暂无可登入的游客账号");
+        }
+        // 2. 如果用户存在，随机返回一个游客账号给用户使用
+        Collections.shuffle(guestUsers);
+        User guest = guestUsers.getFirst();
+        request.getSession().setAttribute(USER_LOGIN_STATE, guest);
+        // 5. 返回脱敏的用户信息
+        return this.getLoginUserVO(guest);
     }
 
     private void validateImageFile(MultipartFile file) {

@@ -39,7 +39,9 @@ INSERT INTO user (
     coin,
     userRole
 )
-VALUES (330953595526582272, 'shikou', '7a69ebe530192e74de21764ddd142a5a', 'Shikou', null, null, 0, 'admin');
+VALUES
+    (330953595526582272, 'shikou', '7a69ebe530192e74de21764ddd142a5a', 'Shikou', null, null, 0, 'admin'),
+    (332715383914065920, 'guest', '3905ad4bbe26cc5f89ce1766ab05bb1c', '游客账号', null, null, 0, 'guest');
 
 -- 应用表
 create table app

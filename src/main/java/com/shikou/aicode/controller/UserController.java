@@ -78,6 +78,18 @@ public class UserController {
         return ResultUtils.success(loginUserVO);
     }
 
+    /**
+     * 游客登入
+     *
+     * @param request          请求对象
+     * @return 脱敏后的用户登录信息
+     */
+    @PostMapping("/guest/login")
+    public BaseResponse<LoginUserVO> guestLogin(HttpServletRequest request) {
+        LoginUserVO loginUserVO = userService.guestLogin(request);
+        return ResultUtils.success(loginUserVO);
+    }
+
     @GetMapping("/get/login")
     public BaseResponse<LoginUserVO> getLoginUser(HttpServletRequest request) {
         User loginUser = userService.getLoginUser(request);
@@ -98,6 +110,7 @@ public class UserController {
     }
 
     @PostMapping("/changePassword")
+    @AuthCheck
     public BaseResponse<Boolean> changePassword(@RequestBody UserChangePasswordRequest changePasswordRequest, HttpServletRequest request) {
         ThrowUtils.throwIf(request == null, ErrorCode.PARAMS_ERROR);
         String newPassword = changePasswordRequest.getNewPassword();
@@ -120,6 +133,7 @@ public class UserController {
     }
 
     @PostMapping("/modify")
+    @AuthCheck
     public BaseResponse<LoginUserVO> userModify(@RequestBody UserModifyRequest modifyRequest, HttpServletRequest request) {
         ThrowUtils.throwIf(modifyRequest==null || request == null, ErrorCode.PARAMS_ERROR);
         User loginUser = userService.getLoginUser(request);
@@ -146,6 +160,7 @@ public class UserController {
     }
 
     @PostMapping("/avatar/upload")
+    @AuthCheck
     public BaseResponse<String> uploadAvatar(@RequestParam("file") MultipartFile file,
                                              HttpServletRequest request) {
         ThrowUtils.throwIf(file==null || request == null, ErrorCode.PARAMS_ERROR);
@@ -154,6 +169,7 @@ public class UserController {
     }
 
     @GetMapping("/get/invitationCode")
+    @AuthCheck
     public BaseResponse<String> getInvitationCode(HttpServletRequest request) {
         ThrowUtils.throwIf(request == null, ErrorCode.PARAMS_ERROR);
         String code = invitationCodeService.generateInvitationCode(request);
@@ -161,6 +177,7 @@ public class UserController {
     }
 
     @GetMapping("/list/invitationCode")
+    @AuthCheck
     public BaseResponse<List<InvitationCodeVO>> listInvitationCode(HttpServletRequest request) {
         ThrowUtils.throwIf(request == null, ErrorCode.PARAMS_ERROR);
         List<InvitationCodeVO> invitationCodeVOList = invitationCodeService.listInvitationCodeVO(request);

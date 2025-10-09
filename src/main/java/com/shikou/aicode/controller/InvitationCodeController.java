@@ -57,7 +57,7 @@ public class InvitationCodeController {
 
     @PostMapping("/list/page/vo")
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
-    public BaseResponse<Page<InvitationCodeVO>> listUserVOByPage(@RequestBody InvitationCodeQueryRequest queryRequest) {
+    public BaseResponse<Page<InvitationCodeVO>> listVOByPage(@RequestBody InvitationCodeQueryRequest queryRequest) {
         ThrowUtils.throwIf(queryRequest == null, ErrorCode.PARAMS_ERROR);
         long pageNum = queryRequest.getPageNum();
         long pageSize = queryRequest.getPageSize();
@@ -72,7 +72,7 @@ public class InvitationCodeController {
 
     @PostMapping("/delete")
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
-    public BaseResponse<Boolean> deleteUser(@RequestBody DeleteRequest deleteRequest) {
+    public BaseResponse<Boolean> deleteCode(@RequestBody DeleteRequest deleteRequest) {
         if (deleteRequest == null || deleteRequest.getId() <= 0) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }

@@ -91,6 +91,7 @@ public class AppController {
     }
 
     @PostMapping("/deploy")
+    @AuthCheck
     public BaseResponse<String> deployApp(@RequestBody AppDeployRequest appDeployRequest, HttpServletRequest request) {
         // 检查部署请求是否为空
         ThrowUtils.throwIf(appDeployRequest == null, ErrorCode.PARAMS_ERROR);

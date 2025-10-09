@@ -15,4 +15,6 @@ public @interface AuthCheck {
      * @return
      */
     String mustRole() default "";
+
+    boolean allowGuest() default false;
 }

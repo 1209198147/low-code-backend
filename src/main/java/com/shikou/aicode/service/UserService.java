@@ -105,4 +105,6 @@ public interface UserService extends IService<User> {
     String getEncryptPassword(String userPassword);
 
     String updateUserAvatar(MultipartFile file, HttpServletRequest request);
+
+    LoginUserVO guestLogin(HttpServletRequest request);
 }

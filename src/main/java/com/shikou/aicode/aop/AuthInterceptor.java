@@ -3,6 +3,7 @@ package com.shikou.aicode.aop;
 import com.shikou.aicode.annotation.AuthCheck;
 import com.shikou.aicode.exception.BusinessException;
 import com.shikou.aicode.exception.ErrorCode;
+import com.shikou.aicode.exception.ThrowUtils;
 import com.shikou.aicode.service.UserService;
 import com.shikou.aicode.model.entity.User;
 import com.shikou.aicode.model.enums.UserRoleEnum;
@@ -38,13 +39,17 @@ public class AuthInterceptor {
         HttpServletRequest request = ((ServletRequestAttributes) requestAttributes).getRequest();
         // 获取当前登录用户
         User loginUser = userService.getLoginUser(request);
+        UserRoleEnum userRoleEnum = UserRoleEnum.getEnumByValue(loginUser.getUserRole());
         UserRoleEnum mustRoleEnum = UserRoleEnum.getEnumByValue(mustRole);
+        // 判断是否允许游客进入
+        if(!authCheck.allowGuest()){
+            ThrowUtils.throwIf(UserRoleEnum.GUEST.equals(userRoleEnum), ErrorCode.NO_AUTH_ERROR, "不允许游客访问");
+        }
         // 不需要权限，直接放行
         if (mustRoleEnum == null) {
             return joinPoint.proceed();
         }
-        // 以下的代码：必须有这个权限才能通过
-        UserRoleEnum userRoleEnum = UserRoleEnum.getEnumByValue(loginUser.getUserRole());
+
         // 没有权限，直接拒绝
         if (userRoleEnum == null) {
             throw new BusinessException(ErrorCode.NO_AUTH_ERROR);

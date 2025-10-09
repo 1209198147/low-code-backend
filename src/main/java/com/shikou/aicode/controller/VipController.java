@@ -1,5 +1,6 @@
 package com.shikou.aicode.controller;
 
+import com.shikou.aicode.annotation.AuthCheck;
 import com.shikou.aicode.common.BaseResponse;
 import com.shikou.aicode.common.ResultUtils;
 import com.shikou.aicode.exception.ErrorCode;
@@ -25,6 +26,7 @@ public class VipController {
 
 
     @PostMapping("/redeem")
+    @AuthCheck
     public BaseResponse<Boolean> Redeem(HttpServletRequest request) {
         ThrowUtils.throwIf(request==null, ErrorCode.PARAMS_ERROR);
         boolean result = vipService.redeem(request);
