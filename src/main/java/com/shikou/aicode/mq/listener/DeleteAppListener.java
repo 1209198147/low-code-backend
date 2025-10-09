@@ -35,10 +35,9 @@ public class DeleteAppListener {
 
     private final String OUTPUT_CODE_DIR = AppConstant.CODE_OUTPUT_ROOT_DIR;
     private final String DEPLOY_CODE_DIR = AppConstant.CODE_DEPLOY_ROOT_DIR;
-    private final int maxSize = 50;
     private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
     private List<Long> appIds = new ArrayList<>();
-    private final long waitTime = 30;
+    private final long waitTime = 1;
     private ReentrantLock lock = new ReentrantLock();
 
     @RabbitListener(queues = "deleteAppQueue", ackMode = "MANUAL")
@@ -50,14 +49,14 @@ public class DeleteAppListener {
             DeleteAppMessage deleteAppMessage = JSONUtil.toBean(messageBody, DeleteAppMessage.class);
             Long appId = deleteAppMessage.getAppId();
             if(appIds.isEmpty()){
-                executor.schedule(()->{
+                executor.scheduleWithFixedDelay(()->{
                     try{
                         lock.lock();
                         cleanUpCodeOutputFile(appIds);
                     }finally {
                         lock.unlock();
                     }
-                }, waitTime, TimeUnit.SECONDS);
+                }, waitTime, waitTime, TimeUnit.HOURS);
             }
             // 聚合消息
             boolean canAdd = lock.tryLock(10, TimeUnit.MILLISECONDS);
