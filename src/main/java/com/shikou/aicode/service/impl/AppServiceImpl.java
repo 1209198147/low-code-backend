@@ -25,6 +25,7 @@ import com.shikou.aicode.model.enums.CodeGenTypeEnum;
 import com.shikou.aicode.model.enums.MessageTypeEnum;
 import com.shikou.aicode.model.vo.AppVO;
 import com.shikou.aicode.model.vo.UserVO;
+import com.shikou.aicode.mq.producer.DeleteAppMessageProducer;
 import com.shikou.aicode.mq.producer.ScreenShotMessageProducer;
 import com.shikou.aicode.service.AppService;
 import com.shikou.aicode.service.ChatHistoryService;
@@ -64,6 +65,9 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App>  implements AppS
     private ScreenShotService screenShotService;
     @Resource
     private ScreenShotMessageProducer screenShotMessageProducer;
+
+    @Resource
+    private DeleteAppMessageProducer deleteAppMessageProducer;
 
     @Value("${code.deploy-host:http://localhost}")
     private String deployHost;
@@ -256,6 +260,12 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App>  implements AppS
         }catch (Exception e){
             log.error("删除应用对应历史对话记录失败 {}", e.getMessage());
         }
+        deleteAppMessageProducer.sendDeleteAppMessage(appId);
         return super.removeById(id);
+    }
+
+    @Override
+    public List<App> getList(List<Long> ids, boolean withDelete){
+        return mapper.findList(ids, withDelete);
     }
 }

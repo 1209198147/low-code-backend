@@ -34,5 +34,7 @@ public interface AppService extends IService<App> {
     void generateAppScreenshotAsync(Long appId, String appUrl);
 
     void updateCover(Long appId, String coverUrl);
+
+    List<App> getList(List<Long> ids, boolean withDelete);
 }
 

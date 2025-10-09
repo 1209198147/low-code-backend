@@ -17,17 +17,30 @@ public class RabbitMQConfig {
         return new Queue("screenShotQueue", true);
     }
 
-    @Bean("screenShotExchange")
-    public DirectExchange screenShotExchange() {
-        return new DirectExchange("screenShotExchange");
+    @Bean("deleteAppQueue")
+    public Queue deleteAppQueue(){
+        return new Queue("deleteAppQueue", true);
     }
 
-    @Bean
-    public Binding binding(@Qualifier("screenShotQueue") Queue screenShotQueue,
-                           @Qualifier("screenShotExchange") DirectExchange screenShotExchange) {
+    @Bean("exchange")
+    public DirectExchange screenShotExchange() {
+        return new DirectExchange("exchange");
+    }
+
+    @Bean("screenShotBinding")
+    public Binding screenShotBinding(@Qualifier("screenShotQueue") Queue screenShotQueue,
+                           @Qualifier("exchange") DirectExchange exchange) {
         return BindingBuilder.bind(screenShotQueue)
-                .to(screenShotExchange)
+                .to(exchange)
                 .with("screenShot");
+    }
+
+    @Bean("deleteAppBinding")
+    public Binding deleteAppBinding(@Qualifier("deleteAppQueue") Queue deleteAppQueue,
+                           @Qualifier("exchange") DirectExchange exchange) {
+        return BindingBuilder.bind(deleteAppQueue)
+                .to(exchange)
+                .with("deleteApp");
     }
 
     @Bean
